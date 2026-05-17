@@ -11,6 +11,7 @@ import { AmendementIngestionService } from './amendement-ingestion.service';
 import { DocumentIngestionService } from './document-ingestion.service';
 import { CompteRenduScrapingService } from './compte-rendu-scraping.service';
 import { LawScraperService } from './law-scraper.service';
+import { DynScraperService } from './dyn-scraper.service';
 import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
 import { Constituency } from '../users/constituency.entity';
@@ -37,6 +38,7 @@ import { CategoriesModule } from '../laws/categories.module';
         DocumentIngestionService,
         CompteRenduScrapingService,
         LawScraperService,
+        DynScraperService,
     ],
     exports: [
         IngestionANService,
@@ -47,6 +49,7 @@ import { CategoriesModule } from '../laws/categories.module';
         DocumentIngestionService,
         CompteRenduScrapingService,
         LawScraperService,
+        DynScraperService,
     ],
 })
 export class IngestionModule { }

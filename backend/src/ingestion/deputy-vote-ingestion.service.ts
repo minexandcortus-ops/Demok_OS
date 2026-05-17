@@ -10,6 +10,7 @@ import { OfficialVote } from '../votes/official-vote.entity';
 import { VoteChoice } from '../votes/vote.types';
 import { AmendementIngestionService } from './amendement-ingestion.service';
 import { CompteRenduScrapingService } from './compte-rendu-scraping.service';
+import { DynScraperService } from './dyn-scraper.service';
 
 @Injectable()
 export class DeputyVoteIngestionService {
@@ -38,6 +39,7 @@ export class DeputyVoteIngestionService {
         private readonly officialVoteRepository: Repository<OfficialVote>,
         private readonly amendementIngestionService: AmendementIngestionService,
         private readonly crScrapingService: CompteRenduScrapingService,
+        private readonly dynScraperService: DynScraperService,
     ) { }
 
     /**
@@ -97,10 +99,39 @@ export class DeputyVoteIngestionService {
                     ? Math.floor((today.getTime() - agendaDate.getTime()) / (1000 * 60 * 60 * 24))
                     : 999;
 
+                // 1. TENTATIVE DE SCRAPING DYNAMIQUE TEMPS RÉEL (Priorité Haute)
+                let dynamicScrapedSuccess = false;
+                try {
+                    const cleanId = (law.externalId || '').replace(/^AN_/, '');
+                    const dossierUrl = law.officialUrl || `https://www.assemblee-nationale.fr/dyn/17/dossiers/${cleanId}`;
+                    const scrutinId = await this.dynScraperService.scrapeScrutinIdFromDossier(dossierUrl);
+                    if (scrutinId) {
+                        const details = await this.dynScraperService.scrapeScrutinDetails(scrutinId);
+                        if (details) {
+                            (details as any).scrutinId = scrutinId;
+                            this.logger.log(`⚡ [DynScraper] Scrutin temps-réel ${scrutinId} trouvé et analysé pour "${law.titleOfficial.substring(0, 50)}..."`);
+                            await this.applyDynScrapedResult(law, details);
+                            
+                            this.amendementIngestionService.ingestAmendements(law).catch(e =>
+                                this.logger.warn(`⚠️ Re-sync amendements après vote dynamique : ${e.message}`)
+                            );
+                            resolved++;
+                            dynamicScrapedSuccess = true;
+                        }
+                    }
+                } catch (dynError) {
+                    this.logger.warn(`⚠️ Échec du scraping dynamique pour "${law.externalId}", bascule sur l'OpenData : ${dynError.message}`);
+                }
+
+                if (dynamicScrapedSuccess) {
+                    continue; // On passe à la loi suivante car celle-ci a été entièrement résolue en temps réel !
+                }
+
+                // 2. BACKUP / SECONDE CHANCE : MÉTHODE CLASSIQUE PAR ZIP OPENDATA
                 const scrutin = scrutins.length > 0 ? this.findMatchingScrutin(law, scrutins) : null;
 
                 if (scrutin) {
-                    this.logger.log(`✅ Scrutin officiel trouvé pour "${law.titleOfficial.substring(0, 50)}..."`);
+                    this.logger.log(`✅ Scrutin officiel trouvé via ZIP pour "${law.titleOfficial.substring(0, 50)}..."`);
                     await this.processScrutin(law, scrutin);
                     
                     this.amendementIngestionService.ingestAmendements(law).catch(e =>
@@ -110,7 +141,7 @@ export class DeputyVoteIngestionService {
                 } else {
                     let scrapedFound = false;
                     if (law.agendaDate) {
-                        this.logger.log(`🔍 Aucun scrutin public pour "${law.externalId}". Tentative de scraping des CR du ${law.agendaDate}...`);
+                        this.logger.log(`🔍 Aucun scrutin public dans le ZIP pour "${law.externalId}". Tentative de scraping des CR du ${law.agendaDate}...`);
                         const scraped = await this.crScrapingService.scrapeResultsFromDay(new Date(law.agendaDate), law);
                         if (scraped) {
                             this.logger.log(`🗳️ Résultats trouvés via scraping CR : ${scraped.pour}/${scraped.contre}`);
@@ -465,6 +496,70 @@ export class DeputyVoteIngestionService {
         law.voteDate = new Date(result.dateScrutin);
         await this.lawRepository.save(law);
         this.logger.log(`✅ Résultats scrapés appliqués pour ${law.externalId} (type: ${law.deputyVoteResult.voteType})`);
+    }
+
+    private async applyDynScrapedResult(law: Law, details: any): Promise<void> {
+        const scrutinId = details.scrutinId || 'scraped_' + Date.now();
+        
+        law.deputyVoteResult = {
+            pour: details.pour,
+            contre: details.contre,
+            abstention: details.abstention,
+            nonVotants: 0,
+            total: details.total,
+            adopted: details.adopted,
+            scrutinId: scrutinId,
+            dateScrutin: details.dateScrutin,
+            voteType: 'scrutin_public',
+        };
+        
+        law.status = this.determineNewStatus(law, { uid: scrutinId, dateScrutin: details.dateScrutin }, details.adopted);
+        law.isOnAgenda = false;
+        law.voteDate = new Date(details.dateScrutin);
+        
+        await this.lawRepository.save(law);
+        
+        // Stockage des votes individuels
+        for (const groupEntry of details.groupVotes) {
+            const groupName = groupEntry.groupName;
+            for (const voteEntry of groupEntry.votes) {
+                const actorRef = voteEntry.deputyAnRef;
+                const choice = voteEntry.choice;
+                const fullName = voteEntry.deputyName;
+                
+                try {
+                    let deputy = await this.deputyRepository.findOne({ where: { anActeurRef: actorRef } });
+                    if (!deputy) {
+                        deputy = this.deputyRepository.create({
+                            externalId: actorRef,
+                            anActeurRef: actorRef,
+                            fullName: fullName,
+                            groupePolitique: groupName,
+                        });
+                        await this.deputyRepository.save(deputy);
+                    }
+                    
+                    const existingVote = await this.officialVoteRepository.findOne({
+                        where: { deputy: { id: deputy.id }, law: { id: law.id } },
+                    });
+                    
+                    if (!existingVote) {
+                        const officialVote = this.officialVoteRepository.create({
+                            deputy,
+                            law,
+                            choice,
+                            voteDate: new Date(details.dateScrutin),
+                            scrutinId: scrutinId,
+                        });
+                        await this.officialVoteRepository.save(officialVote);
+                    }
+                } catch (err) {
+                    this.logger.warn(`⚠️ Erreur d'enregistrement du vote individuel pour le député ${fullName}: ${err.message}`);
+                }
+            }
+        }
+        
+        this.logger.log(`✅ Résultats scrapés DYN appliqués pour ${law.externalId} (Scrutin: ${scrutinId})`);
     }
 
     private normalizeTitle(title: string): string {
