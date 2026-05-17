@@ -1,4 +1,4 @@
 class Env {
-  /// URL de l'API backend (localhost par défaut pour le développement open-source)
-  static const String apiUrl = 'http://localhost:3000';
+  /// URL de l'API backend en production (Scaleway via Caddy)
+  static const String apiUrl = 'https://demok.votre-domaine.com.nip.io';
 }
