@@ -7,6 +7,9 @@ import { Law, LawStatus } from '../laws/law.entity';
 import { OpinionReport } from '../debates/entities/opinion-report.entity';
 import { AdminKeyGuard } from './admin-key.guard';
 
+import { Citizen } from '../users/citizen.entity';
+import { Vote } from '../votes/vote.entity';
+
 @UseGuards(AdminKeyGuard)
 @Controller('admin/reports')
 export class AdminReportsController {
@@ -16,6 +19,10 @@ export class AdminReportsController {
         private readonly lawRepository: Repository<Law>,
         @InjectRepository(OpinionReport)
         private readonly opinionReportRepository: Repository<OpinionReport>,
+        @InjectRepository(Citizen)
+        private readonly citizenRepository: Repository<Citizen>,
+        @InjectRepository(Vote)
+        private readonly voteRepository: Repository<Vote>,
     ) {}
 
     /**
@@ -54,9 +61,17 @@ export class AdminReportsController {
             mergedReports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         }
 
+        // 3. Count global stats
+        const usersCount = await this.citizenRepository.count();
+        const lawsCount = await this.lawRepository.count();
+        const votesCount = await this.voteRepository.count();
+
         return {
             total: mergedReports.length,
             reports: mergedReports,
+            usersCount,
+            lawsCount,
+            votesCount,
             timestamp: new Date().toISOString(),
         };
     }

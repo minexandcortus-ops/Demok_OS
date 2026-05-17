@@ -12,9 +12,12 @@ import { OpinionReport } from '../debates/entities/opinion-report.entity';
 import { ReportsModule } from '../reports/reports.module';
 import { DebatesModule } from '../debates/debates.module';
 
+import { Citizen } from '../users/citizen.entity';
+import { Vote } from '../votes/vote.entity';
+
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Law, Amendement, Report, OpinionReport]),
+        TypeOrmModule.forFeature([Law, Amendement, Report, OpinionReport, Citizen, Vote]),
         IngestionModule,
         ReportsModule,
         DebatesModule,
