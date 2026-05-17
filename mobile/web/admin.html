@@ -160,6 +160,15 @@
     .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
 
     /* ── STATS BAR ── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
     .stats-bar {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -513,7 +522,25 @@
 
   <div class="container">
 
-    <!-- Stats -->
+    <!-- Statistiques Générales -->
+    <h3 class="section-title" style="margin-top: 8px;">Statistiques Générales</h3>
+    <div class="stats-bar" style="margin-bottom: 24px;">
+      <div class="stat-card">
+        <div class="stat-number" id="stat-users" style="color: #a855f7">—</div>
+        <div class="stat-label">Citoyens inscrits</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-laws" style="color: #3b82f6">—</div>
+        <div class="stat-label">Lois publiées</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-votes" style="color: #10b981">—</div>
+        <div class="stat-label">Votes exprimés</div>
+      </div>
+    </div>
+
+    <!-- Modération & Signalements -->
+    <h3 class="section-title">Modération & Signalements</h3>
     <div class="stats-bar">
       <div class="stat-card">
         <div class="stat-number" id="stat-total" style="color: var(--accent)">—</div>
@@ -670,6 +697,9 @@
   let adminKey = sessionStorage.getItem('demok_admin_key') || '';
   let allReports = [];
   let allLaws = [];
+  let registeredUsersCount = 0;
+  let registeredLawsCount = 0;
+  let totalVotesCount = 0;
   let currentFilter = null;
   let lawsOffset = 0;
   const LAWS_LIMIT = 5;
@@ -720,6 +750,9 @@
 
       const data = await res.json();
       allReports = data.reports || [];
+      registeredUsersCount = data.usersCount || 0;
+      registeredLawsCount = data.lawsCount || 0;
+      totalVotesCount = data.votesCount || 0;
 
       // Show app
       document.getElementById('login-screen').style.display = 'none';
@@ -744,6 +777,9 @@
     document.getElementById('stat-total').textContent = allReports.length;
     document.getElementById('stat-pending').textContent = allReports.filter(r => r.status === 'PENDING').length;
     document.getElementById('stat-resolved').textContent = allReports.filter(r => r.status === 'RESOLVED').length;
+    document.getElementById('stat-users').textContent = registeredUsersCount;
+    document.getElementById('stat-laws').textContent = registeredLawsCount;
+    document.getElementById('stat-votes').textContent = totalVotesCount;
   }
 
   // ── Filter ──
