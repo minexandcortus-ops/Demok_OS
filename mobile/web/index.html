@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    If you are serving your web app in a path other than the root, change the
+    href value below to reflect the base path you are serving from.
+
+    The path provided below has to start and end with a slash "/" in order for
+    it to work correctly.
+
+    For more details:
+    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
+
+    This is a placeholder for base href that will be replaced by the value of
+    the `--base-href` argument provided to `flutter build`.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Suivez, débattez et votez les lois">
+
+  <!-- Open Graph / Social Media tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://demok.fr/">
+  <meta property="og:title" content="Démok">
+  <meta property="og:description" content="Suivez, débattez et votez les lois">
+  <meta property="og:image" content="https://demok.fr/icons/Icon-192.png">
+
+  <!-- Twitter tags -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://demok.fr/">
+  <meta property="twitter:title" content="Démok">
+  <meta property="twitter:description" content="Suivez, débattez et votez les lois">
+  <meta property="twitter:image" content="https://demok.fr/icons/Icon-192.png">
+
+  <!-- iOS meta tags & icons -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Démok">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <title>Démok</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #f8fafc; /* Gris très clair, proche du fond de l'app */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .loader-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .logo-text {
+      font-size: 32px;
+      font-weight: 700;
+      color: #1e293b; /* Slate 800 */
+      letter-spacing: -0.5px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(37, 99, 235, 0.1); /* Bleu translucide */
+      border-left-color: #2563eb; /* Bleu primaire */
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loader-container" id="loading-indicator">
+    <!-- On utilise le texte ou une image si dispo. Ici texte stylisé. -->
+    <div class="logo-text">Démok</div>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    // Flutter override: hide the loader once the app is initialized
+    window.addEventListener('flutter-first-frame', function() {
+      var loader = document.getElementById('loading-indicator');
+      if (loader) {
+        loader.style.display = 'none';
+      }
+    });
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+name: demok_mobile
+description: Démok Mobile Application
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  http: ^1.1.0
+  shimmer: ^3.0.0
+  confetti: ^0.8.0
+  url_launcher: ^6.2.2
+  timeago: ^3.6.1
+  showcaseview: ^5.0.1
+  shared_preferences: ^2.5.4
+  firebase_core: ^4.5.0
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/logos_partis/
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  remove_alpha_ios: true
+  image_path: "assets/images/app_icon_padded.png"
+  web:
+    generate: true
+    image_path: "assets/images/app_icon_padded.png"
+    background_color: "#FFFFFF"
+    theme_color: "#FFFFFF"

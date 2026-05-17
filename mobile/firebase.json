@@ -1,0 +1,51 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "demok-ba1a1",
+          "appId": "1:1087284539439:android:0e0683c253245b4258d6da",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "demok-ba1a1",
+          "configurations": {
+            "android": "1:1087284539439:android:0e0683c253245b4258d6da",
+            "ios": "1:1087284539439:ios:07749c0ecb9ed84b58d6da",
+            "macos": "1:1087284539439:ios:07749c0ecb9ed84b58d6da",
+            "web": "1:1087284539439:web:c17a0fa44044152258d6da"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/admin",
+        "destination": "/admin.html"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "/admin",
+        "headers": [
+          { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+          { "key": "Cache-Control", "value": "no-store" }
+        ]
+      }
+    ]
+  }
+}
