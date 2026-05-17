@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <title>Démok — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #21263a;
+      --border: #2d3148;
+      --accent: #4f7cff;
+      --accent-light: rgba(79,124,255,0.12);
+      --text: #e8eaf6;
+      --text-muted: #7b82a8;
+      --pending: #f59e0b;
+      --reviewed: #3b82f6;
+      --resolved: #10b981;
+      --danger: #ef4444;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .login-logo {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .login-subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 40px;
+    }
+
+    .login-card input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 14px 16px;
+      outline: none;
+      margin-bottom: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .login-card input:focus { border-color: var(--accent); }
+
+    .btn-primary {
+      width: 100%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .admin-input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .admin-input:focus { border-color: var(--accent); }
+
+    #login-error {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    /* ── ADMIN APP ── */
+    #admin-app { display: none; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-brand {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .header-brand span { color: var(--text-muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .stat-label { color: var(--text-muted); font-size: 13px; }
+
+    /* ── FILTERS ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar h2 { font-size: 18px; font-weight: 600; flex: 1; }
+
+    .filter-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+    /* ── REPORTS TABLE ── */
+    .reports-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .report-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      transition: border-color 0.2s;
+    }
+
+    .report-card:hover { border-color: var(--accent); }
+
+    .report-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .report-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-category {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .badge-PENDING { background: rgba(245,158,11,0.15); color: var(--pending); border: 1px solid rgba(245,158,11,0.3); }
+    .badge-REVIEWED { background: rgba(59,130,246,0.15); color: var(--reviewed); border: 1px solid rgba(59,130,246,0.3); }
+    .badge-RESOLVED { background: rgba(16,185,129,0.15); color: var(--resolved); border: 1px solid rgba(16,185,129,0.3); }
+
+    .report-date { color: var(--text-muted); font-size: 12px; }
+
+    .report-description {
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .report-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .report-ids { color: var(--text-muted); font-size: 12px; font-family: monospace; }
+
+    .status-actions { display: flex; gap: 8px; }
+
+    .btn-status {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+    }
+
+    .btn-review { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.4); color: var(--reviewed); }
+    .btn-review:hover { background: rgba(59,130,246,0.25); }
+    .btn-resolve { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: var(--resolved); }
+    .btn-resolve:hover { background: rgba(16,185,129,0.25); }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-state p { font-size: 16px; }
+
+    #loading {
+      text-align: center;
+      padding: 60px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 20px;
+      font-size: 14px;
+      color: var(--text);
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+    }
+
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--resolved); color: var(--resolved); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+
+    /* ── LAWS SECTION ── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    .law-search-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .law-search-bar input, .law-search-bar select {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 14px;
+      padding: 11px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .law-search-bar input:focus, .law-search-bar select:focus { border-color: var(--accent); }
+    .law-search-bar select option { background: var(--surface); }
+
+    .btn-search {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 11px 22px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-search:hover { opacity: 0.88; }
+
+    .law-result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .law-result-card:hover { border-color: var(--accent); }
+
+    .law-title {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .law-title small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 4px;
+    }
+
+    .law-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .law-status-current {
+      font-size: 12px;
+      color: var(--text-muted);
+      flex: 1;
+    }
+
+    .btn-law-status {
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.2s;
+    }
+
+    .btn-validated { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.4); color: var(--resolved); }
+    .btn-validated:hover { background: rgba(16,185,129,0.25); }
+    .btn-rejected { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: var(--danger); }
+    .btn-rejected:hover { background: rgba(239,68,68,0.25); }
+    .btn-voted-an { background: rgba(79,124,255,0.1); border-color: rgba(79,124,255,0.4); color: var(--accent); }
+    .btn-voted-an:hover { background: rgba(79,124,255,0.25); }
+
+    .confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      padding: 24px;
+    }
+
+    .confirm-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 440px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .confirm-box h3 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+    .confirm-box p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+
+    .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 9px;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-cancel:hover { border-color: var(--text-muted); color: var(--text); }
+
+    @media (max-width: 600px) {
+      .stats-bar { grid-template-columns: 1fr; }
+      header { padding: 0 16px; }
+      .container { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Démok</div>
+    <div class="login-subtitle">Interface Administration</div>
+    <input type="password" id="admin-key-input" placeholder="Clé d'administration" />
+    <button class="btn-primary" onclick="login()">Connexion</button>
+    <div id="login-error">Clé incorrecte. Accès refusé.</div>
+  </div>
+</div>
+
+<!-- ═══════════════ ADMIN APP ═══════════════ -->
+<div id="admin-app">
+  <header>
+    <div class="header-brand">Démok <span>Administration</span></div>
+    <button class="btn-logout" onclick="logout()">Déconnexion</button>
+  </header>
+
+  <div class="container">
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-number" id="stat-total" style="color: var(--accent)">—</div>
+        <div class="stat-label">Total signalements</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-pending" style="color: var(--pending)">—</div>
+        <div class="stat-label">En attente</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="stat-resolved" style="color: var(--resolved)">—</div>
+        <div class="stat-label">Résolus</div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <h2>Signalements utilisateurs</h2>
+      <button class="filter-btn active" onclick="filterReports(null, this)">Tous</button>
+      <button class="filter-btn" onclick="filterReports('PENDING', this)">En attente</button>
+      <button class="filter-btn" onclick="filterReports('REVIEWED', this)">En cours</button>
+      <button class="filter-btn" onclick="filterReports('RESOLVED', this)">Résolus</button>
+      <button class="filter-btn" onclick="loadReports()" style="margin-left: auto;">↻ Actualiser</button>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading">
+      <div class="spinner"></div>
+      Chargement des signalements…
+    </div>
+
+    <!-- Reports list -->
+    <div class="reports-list" id="reports-list" style="display:none;"></div>
+
+    <!-- ── DEBATES SECTION ── -->
+    <hr class="section-divider" />
+    <div class="toolbar">
+      <h2>💬 Modération des débats</h2>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="checkbox" id="opinion-reported-only" checked onchange="searchOpinions()" style="width:18px; height:18px; cursor:pointer;" />
+        <label for="opinion-reported-only" style="font-size:14px; cursor:pointer; color:var(--text-muted)">Signalés uniquement</label>
+      </div>
+    </div>
+
+    <div class="law-search-bar" id="opinion-search-container" style="display:none;">
+      <input type="text" id="opinion-search-input" placeholder="Rechercher dans les commentaires…" />
+      <button class="btn-search" onclick="searchOpinions()">Rechercher</button>
+    </div>
+
+    <div id="opinions-results" class="reports-list"></div>
+    <div id="opinions-load-more" style="text-align:center; margin-top:16px; display:none;">
+      <button class="filter-btn" onclick="searchOpinions(true)" style="width: 100%; max-width: 300px; padding: 12px; font-weight: 600;">⬇️ Charger plus de commentaires</button>
+    </div>
+
+    <!-- ── LAWS SECTION ── -->
+    <hr class="section-divider" />
+
+    <div class="toolbar">
+      <h2>⚖️ Gestion des statuts de lois</h2>
+    </div>
+
+    <div class="law-search-bar">
+      <input type="text" id="law-search-input" placeholder="Rechercher une loi par titre…" />
+      <select id="law-status-filter" onchange="searchLaws()">
+        <option value="PENDING">🔵 En discussion (PENDING)</option>
+        <option value="UPCOMING">📅 À venir (UPCOMING)</option>
+        <option value="VOTED_AN">✅ Votées AN (VOTED_AN)</option>
+        <option value="AT_SENATE">🏛️ Au Sénat (AT_SENATE)</option>
+        <option value="VALIDATED">🟢 Adoptées (VALIDATED)</option>
+        <option value="REJECTED">🔴 Rejetées (REJECTED)</option>
+        <option value="">Tous les statuts</option>
+      </select>
+      <button class="btn-search" onclick="searchLaws()">Rechercher</button>
+    </div>
+
+    <div id="laws-results"></div>
+    <div id="laws-load-more" style="text-align:center; margin-top:16px; display:none; padding-bottom: 40px;">
+      <button class="filter-btn" onclick="searchLaws(true)" style="width: 100%; max-width: 300px; padding: 12px; font-weight: 600;">⬇️ Charger plus de lois</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Confirmation modal -->
+<div class="confirm-overlay" id="confirm-overlay" style="display:none;">
+  <div class="confirm-box">
+    <h3 id="confirm-title">Confirmer la modification</h3>
+    <p id="confirm-body"></p>
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeConfirm()">Annuler</button>
+      <button class="btn-primary" id="confirm-ok" style="width:auto; padding: 10px 28px;">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vote Editor Modal -->
+<div class="confirm-overlay" id="vote-editor-overlay" style="display:none;">
+  <div class="confirm-box" style="max-width:500px;">
+    <h3>📊 Éditer le résultat du vote</h3>
+    <p id="vote-editor-title" style="font-size:12px; margin-bottom:16px; color:var(--text-muted)"></p>
+    
+    <div style="text-align:left; display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
+      <div style="display:flex; align-items:center; gap:12px; background:var(--surface2); padding:12px; border-radius:10px; border:1px solid var(--border)">
+        <input type="checkbox" id="edit-is-main-levee" onchange="toggleVoteInputs()" style="width:18px; height:18px; cursor:pointer;" />
+        <label for="edit-is-main-levee" style="font-size:14px; cursor:pointer;">Adoptée sans scrutin public (main levée)</label>
+      </div>
+      
+      <div id="vote-numbers-container" style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+        <div>
+          <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Pour</label>
+          <input type="number" id="edit-pour" class="admin-input" style="width:100%" placeholder="0" />
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Contre</label>
+          <input type="number" id="edit-contre" class="admin-input" style="width:100%" placeholder="0" />
+        </div>
+        <div>
+          <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Abstention</label>
+          <input type="number" id="edit-abstention" class="admin-input" style="width:100%" placeholder="0" />
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeVoteEditor()">Annuler</button>
+      <button class="btn-primary" onclick="saveVoteResult()" style="width:auto; padding: 10px 28px;">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Link Editor Modal -->
+<div class="confirm-overlay" id="link-editor-overlay" style="display:none;">
+  <div class="confirm-box" style="max-width:600px;">
+    <h3>🔗 Modifier le lien de la loi</h3>
+    <p id="link-editor-title" style="font-size:12px; margin-bottom:16px; color:var(--text-muted)"></p>
+    
+    <div style="text-align:left; margin-bottom:24px;">
+      <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">URL DE LA LOI (ASSEMBLÉE NATIONALE / SÉNAT)</label>
+      <input type="text" id="edit-link-url" class="admin-input" style="width:100%" placeholder="https://www.assemblee-nationale.fr/..." />
+      <div id="current-link-display" style="margin-top:8px; font-size:13px;"></div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeLinkEditor()">Annuler</button>
+      <button class="btn-primary" onclick="saveLawLink()" style="width:auto; padding: 10px 28px;">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API_BASE = 'https://demok.51.159.162.253.nip.io';
+  let adminKey = sessionStorage.getItem('demok_admin_key') || '';
+  let allReports = [];
+  let allLaws = [];
+  let currentFilter = null;
+  let lawsOffset = 0;
+  const LAWS_LIMIT = 5;
+
+  // ── Auto-reconnect on refresh ──
+  if (adminKey) {
+    loadReports();
+  }
+
+  // ── Auth ──
+  function login() {
+    const key = document.getElementById('admin-key-input').value.trim();
+    if (!key) return;
+    adminKey = key;
+    sessionStorage.setItem('demok_admin_key', adminKey);
+    loadReports();
+  }
+
+  document.getElementById('admin-key-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') login();
+  });
+
+  function logout() {
+    adminKey = '';
+    allReports = [];
+    sessionStorage.removeItem('demok_admin_key');
+    document.getElementById('admin-app').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('admin-key-input').value = '';
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  // ── Load reports ──
+  async function loadReports() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('reports-list').style.display = 'none';
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/reports`, {
+        headers: { 'x-admin-key': adminKey }
+      });
+
+      if (res.status === 401) {
+        document.getElementById('login-error').style.display = 'block';
+        adminKey = '';
+        return;
+      }
+
+      const data = await res.json();
+      allReports = data.reports || [];
+
+      // Show app
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-app').style.display = 'block';
+      document.getElementById('login-error').style.display = 'none';
+
+      updateStats();
+      renderReports(currentFilter);
+      searchLaws();
+      searchOpinions();
+
+    } catch (e) {
+      showToast(`Erreur de connexion au serveur: ${e.message}`, 'error');
+      console.error(e);
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+    }
+  }
+
+  // ── Stats ──
+  function updateStats() {
+    document.getElementById('stat-total').textContent = allReports.length;
+    document.getElementById('stat-pending').textContent = allReports.filter(r => r.status === 'PENDING').length;
+    document.getElementById('stat-resolved').textContent = allReports.filter(r => r.status === 'RESOLVED').length;
+  }
+
+  // ── Filter ──
+  function filterReports(status, btn) {
+    currentFilter = status;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderReports(status);
+  }
+
+  // ── Render ──
+  function renderReports(statusFilter) {
+    const list = document.getElementById('reports-list');
+    const filtered = statusFilter ? allReports.filter(r => r.status === statusFilter) : allReports;
+
+    list.style.display = 'flex';
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">✅</div><p>Aucun signalement ${statusFilter ? 'dans cette catégorie' : ''}.</p></div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(r => `
+      <div class="report-card" id="card-${r.id}">
+        <div class="report-header">
+          <div class="report-meta">
+            <span class="badge badge-category">${categoryLabel(r.category)}</span>
+            <span class="badge badge-${r.status}">${statusLabel(r.status)}</span>
+            <span class="report-date">${formatDate(r.createdAt)}</span>
+          </div>
+        </div>
+        <div class="report-description">${escapeHtml(r.description)}</div>
+        <div class="report-footer">
+          <div class="report-ids">
+            📋 Loi: ${r.lawId.substring(0,8)}…
+            ${r.userId ? `· 👤 User: ${r.userId.substring(0,8)}…` : '· 👤 Anonyme'}
+          </div>
+          <div class="status-actions">
+            ${r.status !== 'REVIEWED' ? `<button class="btn-status btn-review" onclick="updateStatus('${r.id}', 'REVIEWED')">En cours</button>` : ''}
+            ${r.status !== 'RESOLVED' ? `<button class="btn-status btn-resolve" onclick="updateStatus('${r.id}', 'RESOLVED')">Résolu</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── Update status ──
+  async function updateStatus(id, status) {
+    try {
+      const res = await fetch(`${API_BASE}/admin/reports/${id}/status?status=${status}`, {
+        method: 'PATCH',
+        headers: { 'x-admin-key': adminKey }
+      });
+
+      if (res.ok) {
+        const report = allReports.find(r => r.id === id);
+        if (report) report.status = status;
+        updateStats();
+        renderReports(currentFilter);
+        showToast('Statut mis à jour ✓', 'success');
+      }
+    } catch (e) {
+      showToast('Erreur lors de la mise à jour', 'error');
+    }
+  }
+
+  // ── Helpers ──
+  function categoryLabel(cat) {
+    const labels = { TITLE: '📝 Titre', RESULT: '🗳️ Résultat', SUMMARY: '📄 Résumé', ARGUMENT: '💬 Argument', OTHER: '🔍 Autre' };
+    return labels[cat] || cat;
+  }
+
+  function statusLabel(s) {
+    return { PENDING: '⏳ En attente', REVIEWED: '👀 En cours', RESOLVED: '✅ Résolu' }[s] || s;
+  }
+
+  function formatDate(iso) {
+    return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── Laws management ──
+  async function searchLaws(isLoadMore = false) {
+    const q = document.getElementById('law-search-input').value.trim();
+    const status = document.getElementById('law-status-filter').value;
+    const container = document.getElementById('laws-results');
+    const loadMoreBtn = document.getElementById('laws-load-more');
+
+    if (!isLoadMore) {
+      lawsOffset = 0;
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Recherche…</div>';
+      loadMoreBtn.style.display = 'none';
+      allLaws = [];
+    } else {
+      lawsOffset += LAWS_LIMIT;
+    }
+
+    try {
+      let url = `${API_BASE}/admin/laws?limit=${LAWS_LIMIT}&offset=${lawsOffset}&`;
+      if (q) url += `q=${encodeURIComponent(q)}&`;
+      if (status) url += `status=${status}`;
+
+      const res = await fetch(url, { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+
+      if (!isLoadMore) container.innerHTML = '';
+
+      if ((!data.laws || data.laws.length === 0) && !isLoadMore) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><p>Aucune loi trouvée.</p></div>';
+        return;
+      }
+
+      if (data.laws) allLaws = [...allLaws, ...data.laws];
+
+      const lawsHtml = data.laws.map(law => {
+        const vote = law.deputyVoteResult || { pour: 0, contre: 0, abstention: 0, isMainLevee: false };
+        const voteInfo = vote.isMainLevee 
+          ? '<span style="color:var(--pending); font-size:12px; font-weight:500;">✋ Adoptée sans scrutin public</span>'
+          : `<span style="color:var(--text-muted); font-size:12px;">📊 ${vote.pour} Pour / ${vote.contre} Contre / ${vote.abstention} Abs.</span>`;
+
+        return `
+        <div class="law-result-card" id="lawcard-${law.id}">
+          <div class="law-title">
+            ${escapeHtml(law.titleVulgarized || law.titleOfficial)}
+            <small>${escapeHtml(law.titleOfficial)}</small>
+            <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+              ${voteInfo}
+              ${law.officialUrl ? `<a href="${law.officialUrl}" target="_blank" title="Voir le lien officiel" style="text-decoration:none; font-size:14px;">🔗</a>` : ''}
+            </div>
+          </div>
+          <div class="law-actions">
+            <span class="law-status-current">Statut actuel : <strong>${lawStatusLabel(law.status)}</strong></span>
+            <div style="display:flex; gap:8px; width:100%; margin-top:12px; flex-wrap:wrap;">
+              <button class="btn-law-status btn-voted-an" onclick="confirmLawStatus('${law.id}', 'VOTED_AN', '${escapeHtml(law.titleVulgarized || law.titleOfficial).replace(/'/g, "\\'")}')">✅ Votée AN</button>
+              <button class="btn-law-status btn-validated" onclick="confirmLawStatus('${law.id}', 'VALIDATED', '${escapeHtml(law.titleVulgarized || law.titleOfficial).replace(/'/g, "\\'")}')">🏛️ Adoptée</button>
+              <button class="btn-law-status btn-rejected" onclick="confirmLawStatus('${law.id}', 'REJECTED', '${escapeHtml(law.titleVulgarized || law.titleOfficial).replace(/'/g, "\\'")}')">❌ Rejetée</button>
+              <button class="btn-law-status" style="border-color:var(--accent); color:var(--accent); background:rgba(79,124,255,0.05); margin-left:auto;" onclick="openLinkEditor('${law.id}')">🔗 ${law.officialUrl ? 'Modifier Lien' : 'Ajouter Lien'}</button>
+              <button class="btn-law-status" style="border-color:var(--accent); color:var(--accent); background:rgba(79,124,255,0.05);" onclick="openVoteEditor('${law.id}')">⚙️ Éditer Vote</button>
+            </div>
+          </div>
+        </div>
+      `}).join('');
+
+      if (isLoadMore) {
+        container.insertAdjacentHTML('beforeend', lawsHtml);
+      } else {
+        container.innerHTML = lawsHtml;
+      }
+
+      // Show load more if there's more to come
+      if (data.total > lawsOffset + data.laws.length) {
+        loadMoreBtn.style.display = 'block';
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
+
+    } catch (e) {
+      if (!isLoadMore) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Erreur de chargement: ${e.message}</p></div>`;
+      }
+      console.error(e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('law-search-input')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') searchLaws();
+    });
+  });
+
+  let pendingConfirm = null;
+
+  function confirmLawStatus(lawId, newStatus, title) {
+    const labels = { VALIDATED: '🏛️ Adoptée (définitive)', REJECTED: '❌ Rejetée (définitive)', VOTED_AN: '✅ Votée à l\'Assemblée Nationale' };
+    document.getElementById('confirm-title').textContent = 'Modifier le statut de la loi ?';
+    document.getElementById('confirm-body').innerHTML =
+      `<strong>${title}</strong><br/><br/>Cette action va passer la loi au statut :<br/><strong>${labels[newStatus]}</strong><br/><br/>⚠️ Cette modification est durable et s'applique immédiatement.`;
+    document.getElementById('confirm-ok').onclick = () => { closeConfirm(); applyLawStatus(lawId, newStatus); };
+    document.getElementById('confirm-overlay').style.display = 'flex';
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirm-overlay').style.display = 'none';
+  }
+
+  async function applyLawStatus(lawId, newStatus) {
+    try {
+      const res = await fetch(`${API_BASE}/admin/laws/${lawId}/status`, {
+        method: 'PATCH',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, 'success');
+        searchLaws(); // Refresh list
+      } else {
+        showToast(data.message || 'Erreur', 'error');
+      }
+    } catch (e) {
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  function lawStatusLabel(s) {
+    return { PENDING: '🔵 En discussion', UPCOMING: '📅 À venir', VOTED_AN: '✅ Votée AN', AT_SENATE: '🏛️ Au Sénat', VALIDATED: '🟢 Adoptée', REJECTED: '🔴 Rejetée' }[s] || s;
+  }
+
+  // ── Vote Result Editor ──
+  let editingLawId = null;
+
+  function openVoteEditor(lawId) {
+    editingLawId = lawId;
+    const law = allLaws.find(l => l.id === lawId);
+    if (!law) return;
+
+    document.getElementById('vote-editor-title').textContent = law.titleVulgarized || law.titleOfficial;
+    
+    const vote = law.deputyVoteResult || { pour: 0, contre: 0, abstention: 0, isMainLevee: false };
+    
+    document.getElementById('edit-is-main-levee').checked = !!vote.isMainLevee;
+    document.getElementById('edit-pour').value = vote.pour || 0;
+    document.getElementById('edit-contre').value = vote.contre || 0;
+    document.getElementById('edit-abstention').value = vote.abstention || 0;
+    
+    toggleVoteInputs();
+    document.getElementById('vote-editor-overlay').style.display = 'flex';
+  }
+
+  function toggleVoteInputs() {
+    const isMainLevee = document.getElementById('edit-is-main-levee').checked;
+    const container = document.getElementById('vote-numbers-container');
+    container.style.opacity = isMainLevee ? '0.3' : '1';
+    container.style.pointerEvents = isMainLevee ? 'none' : 'auto';
+  }
+
+  function closeVoteEditor() {
+    document.getElementById('vote-editor-overlay').style.display = 'none';
+    editingLawId = null;
+  }
+
+  async function saveVoteResult() {
+    const payload = {
+      isMainLevee: document.getElementById('edit-is-main-levee').checked,
+      pour: parseInt(document.getElementById('edit-pour').value) || 0,
+      contre: parseInt(document.getElementById('edit-contre').value) || 0,
+      abstention: parseInt(document.getElementById('edit-abstention').value) || 0,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/laws/${editingLawId}/vote-result`, {
+        method: 'PATCH',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Résultat mis à jour ✓', 'success');
+        closeVoteEditor();
+        searchLaws(); // Refresh list
+      } else {
+        showToast(data.message || 'Erreur', 'error');
+      }
+    } catch (e) {
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  // ── Law Link Editor ──
+  function openLinkEditor(lawId) {
+    editingLawId = lawId;
+    const law = allLaws.find(l => l.id === lawId);
+    if (!law) return;
+
+    document.getElementById('link-editor-title').textContent = law.titleVulgarized || law.titleOfficial;
+    document.getElementById('edit-link-url').value = law.officialUrl || '';
+    
+    const display = document.getElementById('current-link-display');
+    if (law.officialUrl) {
+      display.innerHTML = `Lien actuel : <a href="${law.officialUrl}" target="_blank" style="color:var(--accent); text-decoration:underline;">Consulter ↗</a>`;
+    } else {
+      display.innerHTML = '<span style="color:var(--text-muted)">Aucun lien enregistré</span>';
+    }
+
+    document.getElementById('link-editor-overlay').style.display = 'flex';
+  }
+
+  function closeLinkEditor() {
+    document.getElementById('link-editor-overlay').style.display = 'none';
+    editingLawId = null;
+  }
+
+  async function saveLawLink() {
+    const url = document.getElementById('edit-link-url').value.trim();
+    
+    try {
+      const res = await fetch(`${API_BASE}/admin/laws/${editingLawId}/official-url`, {
+        method: 'PATCH',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ officialUrl: url }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Lien mis à jour ✓', 'success');
+        closeLinkEditor();
+        searchLaws(); 
+      } else {
+        showToast(data.message || 'Erreur', 'error');
+      }
+    } catch (e) {
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  // ── Debates moderation ──
+  let opinionsOffset = 0;
+  const OPINIONS_LIMIT = 10;
+
+  async function searchOpinions(isLoadMore = false) {
+    const q = document.getElementById('opinion-search-input').value.trim();
+    const reportedOnly = document.getElementById('opinion-reported-only').checked;
+    const container = document.getElementById('opinions-results');
+    const loadMoreBtn = document.getElementById('opinions-load-more');
+
+    if (!isLoadMore) {
+      opinionsOffset = 0;
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des débats…</div>';
+      loadMoreBtn.style.display = 'none';
+    } else {
+      opinionsOffset += OPINIONS_LIMIT;
+    }
+
+    try {
+      let url = `${API_BASE}/admin/debates?limit=${OPINIONS_LIMIT}&offset=${opinionsOffset}&reportedOnly=${reportedOnly}&`;
+      if (q) url += `q=${encodeURIComponent(q)}`;
+
+      const res = await fetch(url, { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+
+      if (!isLoadMore) container.innerHTML = '';
+
+      if ((!data.opinions || data.opinions.length === 0) && !isLoadMore) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Aucun commentaire trouvé.</p></div>';
+        return;
+      }
+
+      const opinionsHtml = data.opinions.map(op => `
+        <div class="report-card" id="opinion-card-${op.id}">
+          <div class="report-header">
+            <div class="report-meta">
+              <span class="badge badge-category">👤 ${escapeHtml(op.userPseudo)}</span>
+              <span class="report-date">${formatDate(op.createdAt)}</span>
+            </div>
+            <div class="badge badge-RESOLVED">👍 ${op.mokes}</div>
+          </div>
+          <div class="report-description">${escapeHtml(op.content)}</div>
+          <div class="report-footer">
+            <div class="report-ids">
+              ⚖️ Loi: ${escapeHtml(op.lawTitle)}
+              ${op.reportsCount > 0 ? `<br/><span style="color:var(--danger); font-weight:600;">⚠️ ${op.reportsCount} signalement(s)</span>` : ''}
+            </div>
+            <div class="status-actions">
+              <button class="btn-status btn-rejected" onclick="confirmDeleteOpinion('${op.id}')">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      if (isLoadMore) {
+        container.insertAdjacentHTML('beforeend', opinionsHtml);
+      } else {
+        container.innerHTML = opinionsHtml;
+      }
+
+      if (data.total > opinionsOffset + data.opinions.length) {
+        loadMoreBtn.style.display = 'block';
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
+
+    } catch (e) {
+      if (!isLoadMore) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Erreur: ${e.message}</p></div>`;
+      }
+      console.error(e);
+    }
+  }
+
+  function confirmDeleteOpinion(id) {
+    document.getElementById('confirm-title').textContent = 'Supprimer ce commentaire ?';
+    document.getElementById('confirm-body').innerHTML = 'Voulez-vous vraiment supprimer définitivement ce commentaire ?<br/><br/>⚠️ Cette action est irréversible.';
+    document.getElementById('confirm-ok').onclick = () => { closeConfirm(); deleteOpinion(id); };
+    document.getElementById('confirm-overlay').style.display = 'flex';
+  }
+
+  async function deleteOpinion(id) {
+    try {
+      const res = await fetch(`${API_BASE}/admin/debates/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': adminKey }
+      });
+      if (res.ok) {
+        showToast('Commentaire supprimé ✓', 'success');
+        document.getElementById(`opinion-card-${id}`)?.remove();
+      }
+    } catch (e) {
+      showToast('Erreur lors de la suppression', 'error');
+    }
+  }
+
+  // Event listener for search
+  document.getElementById('opinion-search-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchOpinions();
+  });
+</script>
+
+</body>
+</html>

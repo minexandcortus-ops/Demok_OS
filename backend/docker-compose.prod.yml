@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demok_backend
+    restart: always
+    shm_size: '2gb'
+    environment:
+      - PORT=3000
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=demok_user
+      - DATABASE_PASSWORD=demok_password
+      - DATABASE_NAME=demok_db
+      - JWT_SECRET=${JWT_SECRET:-demok_super_secret_key_2024}
+      - REDIS_URL=redis://redis:6379
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - MISTRAL_MODEL=${MISTRAL_MODEL:-mistral-small-latest}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - ADMIN_KEY=${ADMIN_KEY}
+      - VOTE_SECRET=${VOTE_SECRET}
+    depends_on:
+      - db
+      - redis
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: demok_caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15-alpine
+    container_name: demok_db
+    restart: always
+    environment:
+      POSTGRES_USER: demok_user
+      POSTGRES_PASSWORD: demok_password
+      POSTGRES_DB: demok_db
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: demok_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data_prod:
+    external: true
+    name: backend_postgres_data_prod
+  caddy_data:
+  caddy_config:
+  redis_data:
+

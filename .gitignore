@@ -1,0 +1,56 @@
+
+# Logs and temporary files
+*.log
+backend/backend.log
+backend/error.log
+temp_*
+*.zip
+*.sql
+.metadata
+
+# Explicitly ignore known temporary files
+check_dates.sql
+check_recent_laws.sql
+verify_ingestion.sql
+docs/specs.md
+
+# Node modules and build artifacts
+backend/dist/
+backend/node_modules/
+mobile/.dart_tool/
+mobile/build/
+mobile/android/build/
+node_modules/
+package-lock.json
+package.json
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+mobile/.metadata
+
+# Fichiers de configuration avec clés secrètes - NE JAMAIS COMMIT
+.env
+.env.local
+.env.deploy
+backend/.env
+backend/.env.local
+
+# Fichiers de debug et scripts one-shot (générés temporairement)
+api_dump*.json
+backend/agenda-page.html
+backend/scrutins_output.txt
+backend/Dossiers/
+backend/check-*.ts
+backend/fix-*.ts
+backend/test-*.ts
+backend/parse_*.ts
+backend/clean-*.ts
+backend/find-*.ts
+backend/count-*.ts
+backend/nuke-*.ts
+backend/inject-*.ts
+backend/trigger-*.ts
+backend/run-*.ts
+count-laws.js

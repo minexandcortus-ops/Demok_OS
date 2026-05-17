@@ -1,0 +1,13 @@
+node_modules
+dist
+npm-debug.log
+.git
+.gitignore
+*.md
+test-*.ts
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!nest-cli.json
+src/scripts
