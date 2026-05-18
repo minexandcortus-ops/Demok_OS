@@ -14,10 +14,11 @@ import { DebatesModule } from '../debates/debates.module';
 
 import { Citizen } from '../users/citizen.entity';
 import { Vote } from '../votes/vote.entity';
+import { VoteUrna } from '../votes/vote-choice.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Law, Amendement, Report, OpinionReport, Citizen, Vote]),
+        TypeOrmModule.forFeature([Law, Amendement, Report, OpinionReport, Citizen, Vote, VoteUrna]),
         IngestionModule,
         ReportsModule,
         DebatesModule,
