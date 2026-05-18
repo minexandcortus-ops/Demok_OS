@@ -9,6 +9,7 @@ import { AdminKeyGuard } from './admin-key.guard';
 
 import { Citizen } from '../users/citizen.entity';
 import { Vote } from '../votes/vote.entity';
+import { VoteUrna } from '../votes/vote-choice.entity';
 
 @UseGuards(AdminKeyGuard)
 @Controller('admin/reports')
@@ -21,8 +22,8 @@ export class AdminReportsController {
         private readonly opinionReportRepository: Repository<OpinionReport>,
         @InjectRepository(Citizen)
         private readonly citizenRepository: Repository<Citizen>,
-        @InjectRepository(Vote)
-        private readonly voteRepository: Repository<Vote>,
+        @InjectRepository(VoteUrna)
+        private readonly voteUrnaRepository: Repository<VoteUrna>,
     ) {}
 
     /**
@@ -64,7 +65,7 @@ export class AdminReportsController {
         // 3. Count global stats
         const usersCount = await this.citizenRepository.count();
         const lawsCount = await this.lawRepository.count();
-        const votesCount = await this.voteRepository.count();
+        const votesCount = await this.voteUrnaRepository.count();
 
         return {
             total: mergedReports.length,
