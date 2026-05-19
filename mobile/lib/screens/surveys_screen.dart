@@ -6,6 +6,7 @@ import '../services/user_session.dart';
 import '../theme/app_colors.dart';
 import '../services/api_client.dart';
 import 'package:showcaseview/showcaseview.dart';
+import '../widgets/showcase_helper.dart';
 
 class SurveysScreen extends StatefulWidget {
   const SurveysScreen({Key? key}) : super(key: key);
@@ -35,7 +36,6 @@ class _SurveysScreenState extends State<SurveysScreen> {
                 _presidentialKey,
                 _candidatesKey,
               ]);
-              UserSession().setSurveysShowcaseSeen();
             }
           });
         });
@@ -156,7 +156,8 @@ class _SurveysScreenState extends State<SurveysScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ShowCaseWidget(
+    return DemokShowcaseWidget(
+      onFinish: () => UserSession().setSurveysShowcaseSeen(),
       builder: (context) => Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
@@ -214,7 +215,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Showcase(
+          DemokShowcase(
             key: _presidentialKey,
             description: "Participez au grand sondage national pour la présidentielle 2027. Votre vote est anonyme et modifiable.",
             child: Container(
@@ -246,7 +247,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
           const SizedBox(height: 16),
           // Horizontal scrollable row of candidates
           // Grid display of candidates
-          Showcase(
+          DemokShowcase(
             key: _candidatesKey,
             description: "Cliquez sur un candidat pour voir son parti et confirmer votre intention de vote.",
             child: LayoutBuilder(
