@@ -9,6 +9,7 @@ import 'gamification_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_client.dart';
 import 'package:showcaseview/showcaseview.dart';
+import '../widgets/showcase_helper.dart';
 import 'landing_screen.dart';
 import '../widgets/legal_dialogs.dart';
 
@@ -17,7 +18,8 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShowCaseWidget(
+    return DemokShowcaseWidget(
+      onFinish: () => UserSession().setProfileShowcaseSeen(),
       builder: (context) => const _ProfileScreenContent(),
     );
   }
@@ -61,7 +63,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
               if (_profileData!['constituency'] != null) _deputyKey,
               if (_profileData!['constituency']?['deputyEmail'] != null) _deputyEmailKey,
             ]);
-            UserSession().setProfileShowcaseSeen();
           }
         });
       }
@@ -279,24 +280,13 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
-        actions: [
-          if (!UserSession().hasSeenProfileShowcase)
-            TextButton(
-              onPressed: () {
-                UserSession().setProfileShowcaseSeen();
-                setState(() {}); // Refresh to hide this button
-                ShowCaseWidget.of(context).dismiss();
-              },
-              child: const Text('Passer', style: TextStyle(color: AppColors.primaryBlue)),
-            ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             // Avatar / Badge
-            Showcase(
+            DemokShowcase(
               key: _xpKey,
               description: "Cumulez des points d'Engagement Citoyen (XP) en votant et en débattant. Touchez le badge pour voir votre progression détaillée.",
               child: GestureDetector(
@@ -414,7 +404,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
 
             Divider(color: Colors.grey[200]),
             
-            Showcase(
+            DemokShowcase(
               key: _emailKey,
               description: "Vos données sont chiffrées et protégées. Votre email n'est utilisé que pour les notifications importantes.",
               child: _buildInfoTile(
@@ -439,7 +429,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildStatItem('Votes', '${_profileData!['voteCount'] ?? 0}'),
-                  Showcase(
+                  DemokShowcase(
                     key: _rankKey,
                     description: "Votre statut évolue avec votre implication. Devenez un acteur majeur de la vie politique, jusqu'au rang suprême !",
                     child: _buildStatItem(
@@ -808,7 +798,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   }
 
   Widget _buildDeputyInfoTile(String deputyName, String? deputyEmail) {
-    return Showcase(
+    return DemokShowcase(
       key: _deputyKey,
       description: "Retrouvez ici votre député référent. Vous pouvez le contacter directement par email pour faire entendre votre voix.",
       child: Padding(
@@ -839,7 +829,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
               ),
             ),
             if (deputyEmail != null && deputyEmail.isNotEmpty)
-              Showcase(
+              DemokShowcase(
                 key: _deputyEmailKey,
                 description: "Interpellez-le directement : un clic ici ouvre votre application mail pour lui écrire.",
                 child: IconButton(

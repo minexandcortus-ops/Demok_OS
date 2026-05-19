@@ -1,11 +1,11 @@
 {
-    "name": "demok_mobile",
-    "short_name": "demok_mobile",
-    "start_url": ".",
+    "name": "Démok",
+    "short_name": "Démok",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#FFFFFF",
-    "theme_color": "#FFFFFF",
-    "description": "A new Flutter project.",
+    "theme_color": "#007AFF",
+    "description": "Suivez, débattez et votez les lois françaises.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -93,12 +93,61 @@
   </div>
 
   <script>
-    // Flutter override: hide the loader once the app is initialized
+    // ============================================================
+    // PWA Install Prompt — Démok
+    // ============================================================
+
+    // 1. Détection de la plateforme
+    window.getPlatform = function() {
+      const ua = navigator.userAgent.toLowerCase();
+      if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+      if (/android/.test(ua)) return 'android';
+      return 'other';
+    };
+
+    // 2. Détection mode standalone (PWA déjà installée)
+    window.isRunningAsPwa = function() {
+      return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+    };
+
+    // 3. Capture de l'événement beforeinstallprompt (Android/Chrome)
+    let _deferredPrompt = null;
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+      e.preventDefault();
+      _deferredPrompt = e;
+    });
+
+    window.isInstallAvailable = function() {
+      return _deferredPrompt !== null;
+    };
+
+    // 4. Déclenchement du prompt Android → retourne true si accepté
+    window.triggerInstallPrompt = function() {
+      if (!_deferredPrompt) return Promise.resolve(false);
+      return _deferredPrompt.prompt().then(function() {
+        return _deferredPrompt.userChoice;
+      }).then(function(choiceResult) {
+        const accepted = choiceResult.outcome === 'accepted';
+        _deferredPrompt = null;
+        return accepted;
+      }).catch(function() {
+        _deferredPrompt = null;
+        return false;
+      });
+    };
+
+    // 5. Marque l'installation comme terminée
+    window.addEventListener('appinstalled', function() {
+      _deferredPrompt = null;
+      try { localStorage.setItem('demok_pwa_installed', 'true'); } catch(e) {}
+    });
+
+    // 6. Cache le loader Flutter au premier frame
     window.addEventListener('flutter-first-frame', function() {
       var loader = document.getElementById('loading-indicator');
-      if (loader) {
-        loader.style.display = 'none';
-      }
+      if (loader) loader.style.display = 'none';
     });
   </script>
   <script src="flutter_bootstrap.js" async></script>

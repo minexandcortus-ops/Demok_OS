@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'debate_detail_screen.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../widgets/report_error_dialog.dart';
+import '../widgets/showcase_helper.dart';
 
 class LawDetailScreen extends StatelessWidget {
   final Law law;
@@ -23,7 +24,8 @@ class LawDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ShowCaseWidget(
+    return DemokShowcaseWidget(
+      onFinish: () => UserSession().setLawShowcaseSeen(),
       builder: (context) => _LawDetailScreenContent(law: law),
     );
   }
@@ -34,7 +36,10 @@ class LawDetailScreen extends StatelessWidget {
 class _LawDetailScreenContent extends StatefulWidget {
   final Law law;
 
-  const _LawDetailScreenContent({super.key, required this.law});
+  const _LawDetailScreenContent({
+    super.key,
+    required this.law,
+  });
 
   @override
   State<_LawDetailScreenContent> createState() => _LawDetailScreenContentState();
@@ -82,7 +87,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               _debateBtnKey,
               if (!UserSession().isGuest && ((widget.law.isVotable && !_hasVoted) || _isModifyingVote)) _voteButtonsKey,
             ]);
-            UserSession().setLawShowcaseSeen();
           }
         });
       }
@@ -292,7 +296,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                   tooltip: 'Mettre en favori',
                   onPressed: _toggleFavorite,
                 ),
-                Showcase(
+                DemokShowcase(
                   key: _debateBtnKey,
                   description: "Rejoignez le forum dédié à cette loi pour échanger avec les autres citoyens.",
                   child: IconButton(
@@ -728,7 +732,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   }
 
   Widget _buildVotingButtons() {
-    return Showcase(
+    return DemokShowcase(
       key: _voteButtonsKey,
       description: "C'est votre moment démocratique ! Votez pour donner votre avis sur ce texte.",
       child: Container(

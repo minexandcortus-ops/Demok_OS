@@ -69,6 +69,42 @@ class UserSession {
   bool get hasSeenDebatesShowcase => _prefs?.getBool(_getUserKey('hasSeenDebatesShowcase')) ?? false;
   Future<void> setDebatesShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenDebatesShowcase'), true);
 
+  // ---- Bannière d'installation PWA ----
+
+  /// Timestamp (ms) du dernier "soft dismiss" (swipe/auto)
+  int? get _pwaPromptSoftDismissAt => _prefs?.getInt('pwa_prompt_soft_dismiss_at');
+  
+  /// Timestamp (ms) du dernier "hard dismiss" (bouton Pas maintenant)
+  int? get _pwaPromptHardDismissAt => _prefs?.getInt('pwa_prompt_hard_dismiss_at');
+
+  /// L'app a été installée avec succès via notre bannière
+  bool get pwaInstalled => _prefs?.getBool('pwa_prompt_installed') ?? false;
+
+  /// Vrai si la bannière doit être affichée (en tenant compte des délais)
+  bool get shouldShowPwaBanner {
+    if (pwaInstalled) return false;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    // Hard dismiss = 15 jours
+    final hardDismiss = _pwaPromptHardDismissAt;
+    if (hardDismiss != null && now - hardDismiss < 15 * 86400 * 1000) return false;
+    // Soft dismiss = 1 jour
+    final softDismiss = _pwaPromptSoftDismissAt;
+    if (softDismiss != null && now - softDismiss < 1 * 86400 * 1000) return false;
+    return true;
+  }
+
+  Future<void> setPwaBannerSoftDismissed() async {
+    await _prefs?.setInt('pwa_prompt_soft_dismiss_at', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<void> setPwaBannerHardDismissed() async {
+    await _prefs?.setInt('pwa_prompt_hard_dismiss_at', DateTime.now().millisecondsSinceEpoch);
+  }
+
+  Future<void> setPwaInstalled() async {
+    await _prefs?.setBool('pwa_prompt_installed', true);
+  }
+
   // Définir le mode invité
   Future<void> setGuestMode(bool isGuest) async {
     if (_prefs != null) {
