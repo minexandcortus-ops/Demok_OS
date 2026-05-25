@@ -595,11 +595,23 @@
       <button class="filter-btn" onclick="searchOpinions(true)" style="width: 100%; max-width: 300px; padding: 12px; font-weight: 600;">⬇️ Charger plus de commentaires</button>
     </div>
 
+    <!-- ── POLLS SECTION ── -->
+    <hr class="section-divider" />
+
+    <div class="toolbar">
+      <h2>📊 Sondages d'actualité</h2>
+      <button class="filter-btn" onclick="openCreatePollModal()" style="margin-left:auto; background:rgba(168,85,247,0.12); border-color:#a855f7; color:#a855f7; font-weight:600;">+ Créer un sondage</button>
+    </div>
+
+    <div id="polls-results">
+      <div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des sondages…</div>
+    </div>
+
     <!-- ── LAWS SECTION ── -->
     <hr class="section-divider" />
 
     <div class="toolbar">
-      <h2>⚖️ Gestion des statuts de lois</h2>
+      <h2>⚖️ Gestion des lois</h2>
     </div>
 
     <div class="law-search-bar">
@@ -621,6 +633,30 @@
       <button class="filter-btn" onclick="searchLaws(true)" style="width: 100%; max-width: 300px; padding: 12px; font-weight: 600;">⬇️ Charger plus de lois</button>
     </div>
 
+  </div>
+</div>
+
+<!-- Create Poll Modal -->
+<div class="confirm-overlay" id="create-poll-overlay" style="display:none;">
+  <div class="confirm-box" style="max-width:560px;">
+    <h3>📊 Créer un nouveau sondage</h3>
+    <p style="font-size:12px; margin-bottom:20px; color:var(--text-muted)">Le sondage sera immédiatement visible par tous les citoyens.</p>
+
+    <div style="text-align:left; display:flex; flex-direction:column; gap:14px; margin-bottom:24px;">
+      <div>
+        <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Titre du sondage *</label>
+        <input type="text" id="new-poll-question" class="admin-input" style="width:100%" placeholder="Ex : Réforme des retraites" maxlength="120" />
+      </div>
+      <div>
+        <label style="display:block; font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Sous-titre / Question précise *</label>
+        <textarea id="new-poll-description" class="admin-input" style="width:100%; min-height:80px; resize:vertical; font-family:inherit; font-size:14px;" placeholder="Ex : Êtes-vous favorable à un recul de l'âge de départ à la retraite ?"></textarea>
+      </div>
+    </div>
+
+    <div class="confirm-actions">
+      <button class="btn-cancel" onclick="closeCreatePollModal()">Annuler</button>
+      <button class="btn-primary" onclick="submitCreatePoll()" style="width:auto; padding: 10px 28px; background:#a855f7; border-color:#a855f7;">Créer le sondage</button>
+    </div>
   </div>
 </div>
 
@@ -763,6 +799,7 @@
       renderReports(currentFilter);
       searchLaws();
       searchOpinions();
+      loadPolls();
 
     } catch (e) {
       showToast(`Erreur de connexion au serveur: ${e.message}`, 'error');
@@ -1100,6 +1137,111 @@
         searchLaws(); 
       } else {
         showToast(data.message || 'Erreur', 'error');
+      }
+    } catch (e) {
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  // ── Polls management ──
+  async function loadPolls() {
+    const container = document.getElementById('polls-results');
+    try {
+      const res = await fetch(`${API_BASE}/admin/polls`, { headers: { 'x-admin-key': adminKey } });
+      const data = await res.json();
+
+      if (!data.polls || data.polls.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="icon">📊</div><p>Aucun sondage trouvé.</p></div>';
+        return;
+      }
+
+      container.innerHTML = data.polls.map(p => `
+        <div class="law-result-card" id="poll-card-${p.id}">
+          <div class="law-title">
+            ${escapeHtml(p.question)}
+            <small style="color:var(--text-muted); margin-top:4px; display:block;">${escapeHtml(p.description)}</small>
+            <div style="margin-top:6px; display:flex; align-items:center; gap:10px;">
+              <span style="font-size:12px; color:var(--text-muted)">🗳️ ${p.totalVotes} vote(s)</span>
+              <span style="font-size:12px; color:${p.isActive ? '#10b981' : '#ef4444'}; font-weight:600;">${p.isActive ? '🟢 Actif' : '🔴 Clôturé'}</span>
+            </div>
+          </div>
+          <div class="law-actions">
+            <span class="law-status-current" style="font-size:12px; color:var(--text-muted)">Créé le ${formatDate(p.createdAt)}</span>
+            <div style="display:flex; gap:8px; width:100%; margin-top:12px; flex-wrap:wrap;">
+              ${p.isActive
+                ? `<button class="btn-law-status btn-rejected" onclick="closePoll('${p.id}', '${escapeHtml(p.question).replace(/'/g, "\\'")}')">⛔ Clôturer</button>`
+                : `<button class="btn-law-status btn-voted-an" onclick="reopenPoll('${p.id}', '${escapeHtml(p.question).replace(/'/g, "\\'")}')">🔁 Réouvrir</button>`
+              }
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+    } catch (e) {
+      container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Erreur: ${e.message}</p></div>`;
+    }
+  }
+
+  async function closePoll(id, title) {
+    document.getElementById('confirm-title').textContent = 'Clôturer ce sondage ?';
+    document.getElementById('confirm-body').innerHTML = `<strong>${title}</strong><br/><br/>Ce sondage ne sera plus visible par les citoyens.<br/><br/>⚠️ Vous pourrez le réouvrir à tout moment.`;
+    document.getElementById('confirm-ok').onclick = async () => {
+      closeConfirm();
+      try {
+        const res = await fetch(`${API_BASE}/admin/polls/${id}/close`, { method: 'PATCH', headers: { 'x-admin-key': adminKey } });
+        const data = await res.json();
+        if (data.success) { showToast('Sondage clôturé ✓', 'success'); loadPolls(); }
+        else showToast(data.message || 'Erreur', 'error');
+      } catch (e) { showToast('Erreur de connexion', 'error'); }
+    };
+    document.getElementById('confirm-overlay').style.display = 'flex';
+  }
+
+  async function reopenPoll(id, title) {
+    document.getElementById('confirm-title').textContent = 'Réouvrir ce sondage ?';
+    document.getElementById('confirm-body').innerHTML = `<strong>${title}</strong><br/><br/>Ce sondage redeviendra visible pour tous les citoyens.`;
+    document.getElementById('confirm-ok').onclick = async () => {
+      closeConfirm();
+      try {
+        const res = await fetch(`${API_BASE}/admin/polls/${id}/reopen`, { method: 'PATCH', headers: { 'x-admin-key': adminKey } });
+        const data = await res.json();
+        if (data.success) { showToast('Sondage réouvert ✓', 'success'); loadPolls(); }
+        else showToast(data.message || 'Erreur', 'error');
+      } catch (e) { showToast('Erreur de connexion', 'error'); }
+    };
+    document.getElementById('confirm-overlay').style.display = 'flex';
+  }
+
+  function openCreatePollModal() {
+    document.getElementById('new-poll-question').value = '';
+    document.getElementById('new-poll-description').value = '';
+    document.getElementById('create-poll-overlay').style.display = 'flex';
+  }
+
+  function closeCreatePollModal() {
+    document.getElementById('create-poll-overlay').style.display = 'none';
+  }
+
+  async function submitCreatePoll() {
+    const question = document.getElementById('new-poll-question').value.trim();
+    const description = document.getElementById('new-poll-description').value.trim();
+    if (!question || !description) {
+      showToast('Le titre et le sous-titre sont requis.', 'error');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/admin/polls`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, description }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Sondage créé ✓', 'success');
+        closeCreatePollModal();
+        loadPolls();
+      } else {
+        showToast(data.message || 'Erreur lors de la création', 'error');
       }
     } catch (e) {
       showToast('Erreur de connexion', 'error');
