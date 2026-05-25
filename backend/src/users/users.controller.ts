@@ -2,7 +2,6 @@ import { Controller, Get, Patch, Delete, Body, UseGuards, NotFoundException } fr
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Citizen } from './citizen.entity';
-import { Vote } from '../votes/vote.entity';
 import { User } from './user.entity';
 import { Constituency } from './constituency.entity';
 import { PresidentialVote } from '../surveys/presidential-vote.entity';
@@ -16,8 +15,6 @@ export class UsersController {
     constructor(
         @InjectRepository(Citizen)
         private readonly citizenRepository: Repository<Citizen>,
-        @InjectRepository(Vote)
-        private readonly voteRepository: Repository<Vote>,
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
         @InjectRepository(Constituency)
@@ -134,10 +131,6 @@ export class UsersController {
 
         try {
             console.log(`[DeleteAccount] Deleting data for user ${user.id} / citizen ${citizen.id}`);
-
-            // Delete all Votes by this citizen
-            await this.voteRepository.delete({ citizen: { id: citizen.id } });
-            console.log('[DeleteAccount] Votes deleted');
 
             // Delete all PresidentialVotes by this user
             await this.presidentialVoteRepository.delete({ user: { id: citizen.user.id } });

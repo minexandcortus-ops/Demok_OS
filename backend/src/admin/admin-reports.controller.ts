@@ -8,7 +8,6 @@ import { OpinionReport } from '../debates/entities/opinion-report.entity';
 import { AdminKeyGuard } from './admin-key.guard';
 
 import { Citizen } from '../users/citizen.entity';
-import { Vote } from '../votes/vote.entity';
 import { VoteUrna } from '../votes/vote-choice.entity';
 
 @UseGuards(AdminKeyGuard)
