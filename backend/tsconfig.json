@@ -18,5 +18,5 @@
         "forceConsistentCasingInFileNames": false,
         "noFallthroughCasesInSwitch": false
     },
-    "exclude": ["node_modules", "dist", "*.ts", "!src/**/*.ts", "src/scripts/**/*.ts"]
+    "exclude": ["node_modules", "dist", "*.ts", "!src/**/*.ts", "src/scripts/**/*.ts", "cleanup-db.ts", "fix-future-laws.ts", "fix-recent-voted-laws.ts", "nuke-indivision.ts"]
 }

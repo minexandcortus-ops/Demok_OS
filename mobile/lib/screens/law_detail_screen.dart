@@ -587,7 +587,8 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   }
 
   Widget _buildVoteResults() {
-    final stats = _voteResult!['statistics'];
+    final stats = _voteResult?['statistics'];
+    if (stats == null) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

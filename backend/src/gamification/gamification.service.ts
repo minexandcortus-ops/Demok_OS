@@ -78,7 +78,8 @@ export class GamificationService {
         // === Bonus réactivité (vote dans les 24h après publication) ===
         const law = await this.lawRepository.findOne({ where: { id: lawId } });
         if (law && law.voteDate) {
-            const hoursSincePublication = (Date.now() - law.voteDate.getTime()) / (1000 * 60 * 60);
+            const voteDateTime = new Date(law.voteDate).getTime();
+            const hoursSincePublication = (Date.now() - voteDateTime) / (1000 * 60 * 60);
             if (hoursSincePublication < 24) {
                 xpGains.push({ amount: GameConstants.XP.VOTE_FAST, reason: 'Vote rapide (24h)' });
                 totalXP += GameConstants.XP.VOTE_FAST;

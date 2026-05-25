@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Brackets } from 'typeorm';
-import { Vote } from './vote.entity';
 import { VoteRegistry } from './vote-registry.entity';
 import { VoteUrna } from './vote-choice.entity';
 import { VoteChoice } from './vote.types';
@@ -18,7 +17,6 @@ import * as crypto from 'crypto';
 @Injectable()
 export class VotesService {
     /**
-     * @param voteRepository Repository for citizen votes
      * @param lawRepository Repository for laws/proposals
      * @param citizenRepository Repository for citizen profiles
      * @param officialVoteRepository Repository for votes cast by deputies
@@ -26,8 +24,6 @@ export class VotesService {
      * @param gamificationService Service handling XP and levels
      */
     constructor(
-        @InjectRepository(Vote)
-        private readonly voteRepository: Repository<Vote>,
         @InjectRepository(VoteRegistry)
         private readonly voteRegistryRepository: Repository<VoteRegistry>,
         @InjectRepository(VoteUrna)

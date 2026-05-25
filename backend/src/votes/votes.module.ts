@@ -2,9 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VotesService } from './votes.service';
 import { VotesController } from './votes.controller';
-import { AnonymityMigrationService } from './anonymity-migration.service';
 import { ConfigModule } from '@nestjs/config';
-import { Vote } from './vote.entity';
 import { VoteRegistry } from './vote-registry.entity';
 import { VoteUrna } from './vote-choice.entity';
 import { Deputy } from './deputy.entity';
@@ -16,13 +14,11 @@ import { Citizen } from '../users/citizen.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Vote, VoteRegistry, VoteUrna, Deputy, OfficialVote, Law, Citizen, LawFavorite]),
+        TypeOrmModule.forFeature([VoteRegistry, VoteUrna, Deputy, OfficialVote, Law, Citizen, LawFavorite]),
         ConfigModule,
     ],
     controllers: [VotesController],
-    providers: [VotesService, AnonymityMigrationService],
+    providers: [VotesService],
     exports: [VotesService],
 })
-export class VotesModule {
-    constructor(private readonly migrationService: AnonymityMigrationService) { }
-}
+export class VotesModule {}

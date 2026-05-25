@@ -10,7 +10,6 @@ import { User } from './users/user.entity';
 import { Citizen } from './users/citizen.entity';
 import { Constituency } from './users/constituency.entity';
 import { AuthModule } from './auth/auth.module';
-import { Vote } from './votes/vote.entity';
 import { VoteRegistry } from './votes/vote-registry.entity';
 import { VoteUrna } from './votes/vote-choice.entity';
 import { Deputy } from './votes/deputy.entity';
@@ -57,7 +56,7 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
             database: process.env.DATABASE_NAME || 'Démok_db',
             entities: [
                 Law, LawFavorite, User, Citizen, Constituency, 
-                Vote, VoteRegistry, VoteUrna, Deputy, OfficialVote, 
+                VoteRegistry, VoteUrna, Deputy, OfficialVote, 
                 CitizenLevel, Category, Amendement, Candidate, 
                 PresidentialVote, Opinion, OpinionMoke, OpinionReport, TopicPoll,
                 Report, SurveyRegistry, SurveyUrna
