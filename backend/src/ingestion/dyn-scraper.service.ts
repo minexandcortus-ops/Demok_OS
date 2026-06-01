@@ -60,6 +60,44 @@ export class DynScraperService {
                 }
             });
 
+            // Si non trouvé, on cherche dans les blocs AJAX (data-content)
+            if (!scrutinId) {
+                const embedUrls: string[] = [];
+                $('[data-content]').each((_, element) => {
+                    const dataContent = $(element).attr('data-content');
+                    if (dataContent && dataContent.includes('/scrutins')) {
+                        embedUrls.push(dataContent);
+                    }
+                });
+
+                for (const embedUrl of embedUrls) {
+                    const fullEmbedUrl = embedUrl.startsWith('http') ? embedUrl : `https://www.assemblee-nationale.fr${embedUrl}`;
+                    this.logger.log(`🔍 Chargement du fragment AJAX : ${fullEmbedUrl}`);
+                    try {
+                        const embedResponse = await firstValueFrom(
+                            this.httpService.get(fullEmbedUrl, {
+                                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                                timeout: 10000
+                            })
+                        );
+                        const $embed = cheerio.load(embedResponse.data);
+                        $embed('a[href^="/dyn/17/scrutins/"]').each((_, element) => {
+                            const href = $embed(element).attr('href');
+                            if (href) {
+                                const id = href.split('/').pop();
+                                if (id && id.trim()) {
+                                    scrutinId = id.trim();
+                                    return false; // Break loop
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        this.logger.warn(`⚠️ Échec du chargement du fragment AJAX: ${e.message}`);
+                    }
+                    if (scrutinId) break;
+                }
+            }
+
             if (scrutinId) {
                 this.logger.log(`🎯 Scrutin public détecté sur le dossier ! ID: ${scrutinId}`);
             } else {

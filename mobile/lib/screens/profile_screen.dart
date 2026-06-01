@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/user_session.dart';
 import '../theme/app_colors.dart';
 import '../widgets/citizen_badge.dart';
@@ -12,15 +13,17 @@ import 'package:showcaseview/showcaseview.dart';
 import '../widgets/showcase_helper.dart';
 import 'landing_screen.dart';
 import '../widgets/legal_dialogs.dart';
+import '../services/push_notification_service.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  final bool autoExpandNotifications;
+  const ProfileScreen({super.key, this.autoExpandNotifications = false});
 
   @override
   Widget build(BuildContext context) {
     return DemokShowcaseWidget(
       onFinish: () => UserSession().setProfileShowcaseSeen(),
-      builder: (context) => const _ProfileScreenContent(),
+      builder: (context) => _ProfileScreenContent(autoExpandNotifications: autoExpandNotifications),
     );
   }
 }
@@ -28,7 +31,8 @@ class ProfileScreen extends StatelessWidget {
 /// Écran de profil utilisateur affichant les informations personnelles, 
 /// la circonscription, le député associé et la progression (XP/Niveau).
 class _ProfileScreenContent extends StatefulWidget {
-  const _ProfileScreenContent({super.key});
+  final bool autoExpandNotifications;
+  const _ProfileScreenContent({super.key, this.autoExpandNotifications = false});
 
   @override
   State<_ProfileScreenContent> createState() => _ProfileScreenContentState();
@@ -39,6 +43,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   bool _isLoading = true;
   CitizenProgress? _gamificationProgress;
   final GamificationService _gamificationService = GamificationService();
+  bool _notificationsAuthorized = false;
 
   final GlobalKey _xpKey = GlobalKey();
   final GlobalKey _rankKey = GlobalKey();
@@ -51,6 +56,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     super.initState();
     _fetchProfile();
     _fetchGamificationProgress();
+    _checkNotificationStatus();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!UserSession().hasSeenProfileShowcase) {
@@ -74,6 +80,19 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     setState(() {
       _gamificationProgress = progress;
     });
+  }
+
+  Future<void> _checkNotificationStatus() async {
+    // Only works on mobile or https web. We wrap it to avoid crash on dev HTTP web
+    try {
+      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized || 
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        if (mounted) setState(() => _notificationsAuthorized = true);
+      }
+    } catch (e) {
+      debugPrint("Could not check notification status: $e");
+    }
   }
 
 
@@ -416,6 +435,87 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
             ),
             
             const SizedBox(height: 32),
+
+            // Notification Preferences
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                  iconColor: AppColors.primaryBlue,
+                  collapsedIconColor: AppColors.primaryBlue,
+                  initiallyExpanded: widget.autoExpandNotifications,
+                  title: Text(
+                    'Notifications Push',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                  childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _notificationsAuthorized ? null : () async {
+                            await PushNotificationService().init();
+                            await _checkNotificationStatus();
+                            if (context.mounted && !_notificationsAuthorized) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Demande d\'autorisation envoyée. (Si rien ne s\'affiche, veuillez vérifier les réglages iOS/Android).'),
+                                ),
+                              );
+                            }
+                          },
+                          icon: Icon(_notificationsAuthorized ? Icons.check_circle : Icons.notifications_active),
+                          label: Text(_notificationsAuthorized ? 'Notifications activées' : 'Activer sur cet appareil'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _notificationsAuthorized ? Colors.green : AppColors.primaryBlue,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: Colors.green.withValues(alpha: 0.8),
+                            disabledForegroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Résultats des lois votées', style: TextStyle(fontSize: 14)),
+                      value: _profileData!['notifyLawResults'] ?? true,
+                      onChanged: (val) => _updateProfile({'notifyLawResults': val}, popOnSuccess: false),
+                      activeColor: AppColors.primaryBlue,
+                    ),
+                    Divider(height: 1, color: Colors.grey[100]),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Nouveaux sondages', style: TextStyle(fontSize: 14)),
+                      value: _profileData!['notifyNewSurveys'] ?? true,
+                      onChanged: (val) => _updateProfile({'notifyNewSurveys': val}, popOnSuccess: false),
+                      activeColor: AppColors.primaryBlue,
+                    ),
+                    Divider(height: 1, color: Colors.grey[100]),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Résultats des sondages', style: TextStyle(fontSize: 14)),
+                      value: _profileData!['notifySurveyResults'] ?? true,
+                      onChanged: (val) => _updateProfile({'notifySurveyResults': val}, popOnSuccess: false),
+                      activeColor: AppColors.primaryBlue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
             
             // Stats (Votes and Status)
             Container(
@@ -576,7 +676,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     );
   }
 
-  Future<void> _updateProfile(Map<String, dynamic> data) async {
+  Future<void> _updateProfile(Map<String, dynamic> data, {bool popOnSuccess = true}) async {
     try {
       final userId = UserSession().userId;
       if (userId == null) return;
@@ -593,7 +693,9 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
           _profileData = newProfileData;
         });
         if (mounted) {
-          Navigator.of(context).pop(); // Close dialog
+          if (popOnSuccess) {
+            Navigator.of(context).pop(); // Close dialog
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Profil mis à jour avec succès')),
           );

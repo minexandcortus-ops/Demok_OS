@@ -12,10 +12,10 @@ services:
       - PORT=3000
       - DATABASE_HOST=db
       - DATABASE_PORT=5432
-      - DATABASE_USER=demok_user
-      - DATABASE_PASSWORD=demok_password
-      - DATABASE_NAME=demok_db
-      - JWT_SECRET=${JWT_SECRET:-demok_super_secret_key_2024}
+      - DATABASE_USER=${DATABASE_USER}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - JWT_SECRET=${JWT_SECRET}
       - REDIS_URL=redis://redis:6379
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - MISTRAL_MODEL=${MISTRAL_MODEL:-mistral-small-latest}
@@ -50,9 +50,9 @@ services:
     container_name: demok_db
     restart: always
     environment:
-      POSTGRES_USER: demok_user
-      POSTGRES_PASSWORD: demok_password
-      POSTGRES_DB: demok_db
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
 

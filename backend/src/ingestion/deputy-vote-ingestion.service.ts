@@ -11,6 +11,7 @@ import { VoteChoice } from '../votes/vote.types';
 import { AmendementIngestionService } from './amendement-ingestion.service';
 import { CompteRenduScrapingService } from './compte-rendu-scraping.service';
 import { DynScraperService } from './dyn-scraper.service';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class DeputyVoteIngestionService {
@@ -40,6 +41,7 @@ export class DeputyVoteIngestionService {
         private readonly amendementIngestionService: AmendementIngestionService,
         private readonly crScrapingService: CompteRenduScrapingService,
         private readonly dynScraperService: DynScraperService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     /**
@@ -386,6 +388,7 @@ export class DeputyVoteIngestionService {
 
         await this.lawRepository.save(law);
         await this.storeIndividualVotes(law, scrutin, scrutinId, dateScrutin);
+        await this.notificationService.notifyLawModified(law.id);
     }
 
     private determineNewStatus(law: Law, scrutin: any, adopted: boolean): LawStatus {
@@ -496,6 +499,10 @@ export class DeputyVoteIngestionService {
         law.voteDate = new Date(result.dateScrutin);
         await this.lawRepository.save(law);
         this.logger.log(`✅ Résultats scrapés appliqués pour ${law.externalId} (type: ${law.deputyVoteResult.voteType})`);
+        
+        if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.REJECTED) {
+            await this.notificationService.notifyLawModified(law.id);
+        }
     }
 
     private async applyDynScrapedResult(law: Law, details: any): Promise<void> {
@@ -560,6 +567,9 @@ export class DeputyVoteIngestionService {
         }
         
         this.logger.log(`✅ Résultats scrapés DYN appliqués pour ${law.externalId} (Scrutin: ${scrutinId})`);
+        if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.REJECTED) {
+            await this.notificationService.notifyLawModified(law.id);
+        }
     }
 
     private normalizeTitle(title: string): string {

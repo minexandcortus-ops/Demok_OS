@@ -32,6 +32,18 @@ export class User {
     @Column({ type: 'timestamp', nullable: true })
     otpExpires: Date;
 
+    @Column({ nullable: true })
+    fcmToken: string;
+
+    @Column({ default: true })
+    notifyLawResults: boolean;
+
+    @Column({ default: true })
+    notifySurveyResults: boolean;
+
+    @Column({ default: true })
+    notifyNewSurveys: boolean;
+
     @CreateDateColumn()
     createdAt: Date;
 }

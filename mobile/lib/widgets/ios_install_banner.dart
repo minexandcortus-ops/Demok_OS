@@ -78,6 +78,7 @@ class _IosInstallBannerState extends State<IosInstallBanner>
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [
                       BoxShadow(
@@ -86,8 +87,11 @@ class _IosInstallBannerState extends State<IosInstallBanner>
                         offset: const Offset(0, 2),
                       ),
                     ],
-                    image: const DecorationImage(
-                      image: AssetImage('assets/images/logo_demok_vf.png'),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Image.asset(
+                      'assets/images/logo_demok_vf.png',
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -152,23 +156,34 @@ class _IosInstallBannerState extends State<IosInstallBanner>
 
           // ---- Instructions ----
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
               children: [
                 // Étape 1
                 _buildStep(
                   number: '1',
-                  icon: Icons.ios_share,
+                  icon: Icons.more_horiz,
                   iconColor: AppColors.primaryBlue,
-                  text: 'Appuyez sur le bouton',
-                  highlight: 'Partager',
+                  text: 'Appuyez sur le menu',
+                  highlight: '"..."',
                   highlightColor: AppColors.primaryBlue,
-                  extra: ' en bas de Safari',
+                  extra: ' en bas du navigateur',
                 ),
                 const SizedBox(height: 10),
                 // Étape 2
                 _buildStep(
                   number: '2',
+                  icon: Icons.ios_share,
+                  iconColor: AppColors.primaryBlue,
+                  text: 'Appuyez sur le bouton',
+                  highlight: 'Partager',
+                  highlightColor: AppColors.primaryBlue,
+                  extra: '',
+                ),
+                const SizedBox(height: 10),
+                // Étape 3
+                _buildStep(
+                  number: '3',
                   icon: Icons.add_box_outlined,
                   iconColor: AppColors.primaryBlue,
                   text: 'Sélectionnez',
@@ -177,34 +192,6 @@ class _IosInstallBannerState extends State<IosInstallBanner>
                   extra: '',
                 ),
               ],
-            ),
-          ),
-
-          // ---- Flèche animée vers le bas ----
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12, top: 2),
-            child: AnimatedBuilder(
-              animation: _arrowAnimation,
-              builder: (context, child) {
-                return Transform.translate(
-                  offset: Offset(0, _arrowAnimation.value),
-                  child: child,
-                );
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  3,
-                  (i) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    child: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 20,
-                      color: AppColors.primaryBlue.withValues(alpha: 0.3 + i * 0.25),
-                    ),
-                  ),
-                ),
-              ),
             ),
           ),
 

@@ -1,14 +1,23 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../users/user.entity';
+import { NotificationService } from './notification.service';
 
 /**
  * Processor pour traiter les notifications dans la queue Redis
- * PHASE 3 : Logs uniquement (pas de vraies push notifications)
  */
 @Processor('notifications')
 export class NotificationProcessor {
     private readonly logger = new Logger(NotificationProcessor.name);
+
+    constructor(
+        @InjectRepository(User)
+        private userRepository: Repository<User>,
+        private notificationService: NotificationService,
+    ) {}
 
     /**
      * Traite les notifications de modification de loi
@@ -18,11 +27,16 @@ export class NotificationProcessor {
         const { userId, lawId, lawTitle, message } = job.data;
 
         this.logger.log(`📬 Traitement notification pour user ${userId}`);
-        this.logger.log(`   📜 Loi: ${lawTitle} (ID: ${lawId})`);
-        this.logger.log(`   💬 Message: ${message}`);
 
-        // PHASE 3 : Logs uniquement
-        // PHASE 4 : Envoyer vraie push notification (Firebase/OneSignal)
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (user && user.fcmToken && user.notifyLawResults) {
+            await this.notificationService.sendPushNotification(
+                user.fcmToken,
+                'Loi modifiée',
+                message,
+                { type: 'LAW_MODIFIED', lawId }
+            );
+        }
 
         // Simuler un délai de traitement
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -35,6 +49,58 @@ export class NotificationProcessor {
             lawId,
             timestamp: new Date().toISOString(),
         };
+    }
+
+    /**
+     * Traite les notifications de nouveau sondage
+     */
+    @Process('new-survey')
+    async handleNewSurvey(job: Job) {
+        const { pollId, question } = job.data;
+        this.logger.log(`📬 Traitement nouveau sondage: ${question}`);
+
+        // Get all users who want new survey notifications
+        const users = await this.userRepository.find({
+            where: { notifyNewSurveys: true }
+        });
+
+        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+
+        if (tokens.length > 0) {
+            await this.notificationService.sendMulticast(
+                tokens,
+                'Nouveau Sondage',
+                `Un nouveau sondage est disponible : "${question}"`,
+                { type: 'NEW_SURVEY', pollId: String(pollId) }
+            );
+        }
+    }
+
+    /**
+     * Traite les notifications de sondage clôturé
+     */
+    @Process('survey-closed')
+    async handleSurveyClosed(job: Job) {
+        const { pollId, question, voterIds } = job.data;
+        this.logger.log(`📬 Traitement sondage clôturé: ${question}`);
+
+        if (!voterIds || voterIds.length === 0) return;
+
+        const users = await this.userRepository.createQueryBuilder('user')
+            .where('user.id IN (:...ids)', { ids: voterIds })
+            .andWhere('user.notifySurveyResults = :val', { val: true })
+            .getMany();
+
+        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+
+        if (tokens.length > 0) {
+            await this.notificationService.sendMulticast(
+                tokens,
+                'Résultats du sondage',
+                `Le sondage auquel vous avez participé est clôturé : "${question}"`,
+                { type: 'SURVEY_CLOSED', pollId: String(pollId) }
+            );
+        }
     }
 
     /**

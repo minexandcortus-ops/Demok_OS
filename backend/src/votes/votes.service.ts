@@ -399,6 +399,45 @@ export class VotesService {
     }
 
     /**
+     * Retrieves a single law by ID with full statistics and user personalization.
+     */
+    async getLawById(lawId: string, userId?: string) {
+        const law = await this.lawRepository.createQueryBuilder('law')
+            .leftJoinAndSelect('law.categories', 'category')
+            .where('law.id = :lawId', { lawId })
+            .getOne();
+
+        if (!law) throw new NotFoundException('Law not found');
+
+        const statsMap = await this.getBulkVoteStatistics([law.id]);
+        let userVote: VoteChoice | null = null;
+        let isFavorited = false;
+
+        if (userId) {
+            const citizen = await this.citizenRepository.findOne({ where: { user: { id: userId } } });
+            if (citizen) {
+                const token = this.generateVoterToken(citizen.id, law.id);
+                const vote = await this.voteUrnaRepository.findOne({
+                    where: { voterToken: token, law: { id: law.id } }
+                });
+                if (vote) userVote = vote.choice;
+            }
+
+            const favorite = await this.lawFavoriteRepository.findOne({
+                where: { user: { id: userId }, law: { id: law.id } }
+            });
+            if (favorite) isFavorited = true;
+        }
+
+        return {
+            ...law,
+            statistics: statsMap.get(law.id) || { totalVotes: 0, forPercentage: 0, againstPercentage: 0, abstainPercentage: 0 },
+            userVote,
+            isFavorited,
+        };
+    }
+
+    /**
      * Checks if a user has already voted on a specific law.
      * Used for detail screen pre-rendering and deputy comparison.
      * 

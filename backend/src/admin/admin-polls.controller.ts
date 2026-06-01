@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TopicPoll } from '../surveys/topic-poll.entity';
 import { AdminKeyGuard } from './admin-key.guard';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 
 @UseGuards(AdminKeyGuard)
 @Controller('admin/polls')
@@ -10,6 +12,8 @@ export class AdminPollsController {
     constructor(
         @InjectRepository(TopicPoll)
         private readonly pollRepository: Repository<TopicPoll>,
+        @InjectQueue('notifications')
+        private notificationQueue: Queue,
     ) {}
 
     /**
@@ -47,6 +51,29 @@ export class AdminPollsController {
 
         poll.isActive = false;
         await this.pollRepository.save(poll);
+
+        // Notify voters
+        const legacyVoterIds = poll.voters ? poll.voters.split(',').filter(id => id.length > 0) : [];
+        
+        // Fix: Also include voters from the new SurveyRegistry system
+        const registryRepo = this.pollRepository.manager.getRepository('SurveyRegistry');
+        const registries = await registryRepo.find({ 
+            where: { surveyId: poll.id },
+            relations: ['citizen', 'citizen.user']
+        });
+        const newVoterIds = registries
+            .map((r: any) => r.citizen?.user?.id)
+            .filter(id => id !== undefined && id !== null);
+
+        const voterIds = [...new Set([...legacyVoterIds, ...newVoterIds])];
+
+        if (voterIds.length > 0) {
+            await this.notificationQueue.add('survey-closed', {
+                pollId: poll.id,
+                question: poll.question,
+                voterIds,
+            });
+        }
 
         return {
             success: true,
@@ -116,6 +143,11 @@ export class AdminPollsController {
         });
 
         await this.pollRepository.save(poll);
+
+        await this.notificationQueue.add('new-survey', {
+            pollId: poll.id,
+            question: poll.question,
+        });
 
         return {
             success: true,

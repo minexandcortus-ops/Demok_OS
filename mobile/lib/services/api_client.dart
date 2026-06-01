@@ -12,6 +12,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 class ApiClient {
   static const Map<String, String> _defaultHeaders = {
     'Content-Type': 'application/json',
+    'Bypass-Tunnel-Reminder': 'true', // Contourne l'avertissement de sécurité de localtunnel
   };
 
   static Map<String, String> _buildHeaders([Map<String, String>? extra]) {

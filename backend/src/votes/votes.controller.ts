@@ -65,6 +65,18 @@ export class VotesController {
     }
 
     /**
+     * Retrieves a single law by its ID.
+     */
+    @Get('laws/:lawId')
+    @UseGuards(OptionalJwtAuthGuard)
+    async getLaw(
+        @Param('lawId') lawId: string,
+        @CurrentUser() user?: User,
+    ) {
+        return this.votesService.getLawById(lawId, user?.id);
+    }
+
+    /**
      * Checks if a user has voted on a law and returns context (stats, deputy match).
      */
     @Get('check')

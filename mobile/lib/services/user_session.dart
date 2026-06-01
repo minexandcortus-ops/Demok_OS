@@ -105,6 +105,10 @@ class UserSession {
     await _prefs?.setBool('pwa_prompt_installed', true);
   }
 
+  // ---- Prompt de notifications après installation ----
+  bool get hasSeenNotificationPromptAfterInstall => _prefs?.getBool(_getUserKey('hasSeenNotificationPromptAfterInstall')) ?? false;
+  Future<void> setNotificationPromptAfterInstallSeen() async => await _prefs?.setBool(_getUserKey('hasSeenNotificationPromptAfterInstall'), true);
+
   // Définir le mode invité
   Future<void> setGuestMode(bool isGuest) async {
     if (_prefs != null) {

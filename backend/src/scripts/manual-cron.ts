@@ -7,7 +7,7 @@ import { IngestionSchedulerService } from '../scheduler/ingestion-scheduler.serv
  * Usage: npx ts-node src/scripts/manual-cron.ts
  */
 async function bootstrap() {
-    console.log('🚀 Démarrage manuel du CRON Job DéMoK...');
+    console.log('🚀 Démarrage manuel du CRON Job Demok...');
     
     const app = await NestFactory.createApplicationContext(AppModule, { 
         logger: ['error', 'warn', 'log', 'debug'] 

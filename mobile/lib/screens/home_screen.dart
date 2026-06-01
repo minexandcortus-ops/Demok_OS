@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:convert';
+import '../theme/app_colors.dart';
 import '../services/user_session.dart';
 import '../models/law.dart';
 import '../widgets/law_card.dart';
@@ -20,9 +21,11 @@ import '../widgets/showcase_helper.dart';
 import '../services/pwa_install_service.dart';
 import '../widgets/android_install_banner.dart';
 import '../widgets/ios_install_banner.dart';
+import '../services/push_notification_service.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final int initialTab;
+  const HomeScreen({super.key, this.initialTab = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -33,8 +36,10 @@ class HomeScreen extends StatelessWidget {
       onShowcaseFinished: () {
         // Déclenche la bannière PWA 3s après la fin/skip du showcase
         contentKey.currentState?._schedulePwaBanner();
+        // Déclenche la popup de notifications 1.5s après la fin/skip du showcase
+        contentKey.currentState?._scheduleNotificationPrompt();
       },
-      builder: (context) => _HomeScreenContent(key: contentKey),
+      builder: (context) => _HomeScreenContent(key: contentKey, initialTab: initialTab),
     );
   }
 }
@@ -42,7 +47,8 @@ class HomeScreen extends StatelessWidget {
 /// Écran principal de l'application affichant le flux des lois.
 /// Gère la recherche, le filtrage par catégorie/région et l'affichage des cartes de lois.
 class _HomeScreenContent extends StatefulWidget {
-  const _HomeScreenContent({super.key});
+  final int initialTab;
+  const _HomeScreenContent({super.key, this.initialTab = 0});
 
   @override
   State<_HomeScreenContent> createState() => _HomeScreenContentState();
@@ -57,7 +63,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   Timer? _debounce;
   Timer? _pwaBannerTimer;
   bool _isLoading = true;
-  int _selectedTabIndex = 0;
+  late int _selectedTabIndex;
   List<Map<String, dynamic>> _topicPolls = [];
   bool _showPwaBanner = false;
 
@@ -87,6 +93,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   @override
   void initState() {
     super.initState();
+    _selectedTabIndex = widget.initialTab;
     _fetchLaws();
     _fetchTopicPolls();
     _fetchActiveDebates();
@@ -108,6 +115,55 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         _checkAndStartShowcase();
       }
     });
+  }
+
+  void _scheduleNotificationPrompt() {
+    if (!mounted) return;
+    if (PwaInstallService().isAlreadyInstalled && 
+        !UserSession().isGuest && 
+        UserSession().isLoggedIn && 
+        !UserSession().hasSeenNotificationPromptAfterInstall) {
+      
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) _showNotificationPromptAfterInstall();
+      });
+    }
+  }
+
+  void _showNotificationPromptAfterInstall() {
+    UserSession().setNotificationPromptAfterInstallSeen();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restez au courant !', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+          "Activez les notifications pour ne rater aucun sondage ni résultat de vote. Vous pourrez les désactiver à tout moment depuis votre profil.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Plus tard', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              // Déclenche la demande native du système d'exploitation
+              await PushNotificationService().init();
+              
+              if (context.mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProfileScreen(autoExpandNotifications: true)),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+            child: const Text('Activer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _checkAndStartShowcase() {
@@ -280,8 +336,9 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
             _checkAndStartShowcase();
           });
         } else if (refresh && UserSession().hasSeenHomeShowcase) {
-          // Showcase déjà vu : planifie la bannière directement
+          // Showcase déjà vu : planifie la bannière et la popup notifications directement
           _schedulePwaBanner();
+          _scheduleNotificationPrompt();
         }
       }
     } catch (e) {
@@ -620,15 +677,17 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
             child: _showPwaBanner
                 ? GestureDetector(
                     key: const ValueKey('pwa_banner'),
-                    child: Align(
+                      child: Align(
                       alignment: Alignment.bottomCenter,
                       child: PwaInstallService().isIos
                           ? IosInstallBanner(
                               onDismiss: () => _hidePwaBanner(),
                             )
-                          : AndroidInstallBanner(
-                              onDismiss: () => _hidePwaBanner(),
-                            ),
+                          : (PwaInstallService().canInstallAndroid 
+                              ? AndroidInstallBanner(
+                                  onDismiss: () => _hidePwaBanner(),
+                                )
+                              : const SizedBox.shrink()),
                     ),
                   )
                 : const SizedBox.shrink(key: ValueKey('no_banner')),

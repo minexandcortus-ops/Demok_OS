@@ -59,6 +59,9 @@ export class UsersController {
                 deputyEmail: citizen.constituency.deputyEmail,
             } : null,
             email: email,
+            notifyLawResults: citizen.user?.notifyLawResults ?? true,
+            notifySurveyResults: citizen.user?.notifySurveyResults ?? true,
+            notifyNewSurveys: citizen.user?.notifyNewSurveys ?? true,
         };
 
         // Inject available constituencies if we have a postal code
@@ -86,7 +89,14 @@ export class UsersController {
     @Patch('profile')
     async updateProfile(
         @CurrentUser() user: User,
-        @Body() updateData: { email?: string; postalCode?: string; constituencyId?: string }
+        @Body() updateData: { 
+            email?: string; 
+            postalCode?: string; 
+            constituencyId?: string;
+            notifyLawResults?: boolean;
+            notifySurveyResults?: boolean;
+            notifyNewSurveys?: boolean;
+        }
     ) {
         const citizen = await this.citizenRepository.findOne({
             where: { user: { id: user.id } },
@@ -112,6 +122,25 @@ export class UsersController {
                 citizen.constituency = constituency;
                 await this.citizenRepository.save(citizen);
             }
+        }
+
+        // 3. Update Notification Preferences
+        let userNeedsSave = false;
+        if (updateData.notifyLawResults !== undefined) {
+            citizen.user.notifyLawResults = updateData.notifyLawResults;
+            userNeedsSave = true;
+        }
+        if (updateData.notifySurveyResults !== undefined) {
+            citizen.user.notifySurveyResults = updateData.notifySurveyResults;
+            userNeedsSave = true;
+        }
+        if (updateData.notifyNewSurveys !== undefined) {
+            citizen.user.notifyNewSurveys = updateData.notifyNewSurveys;
+            userNeedsSave = true;
+        }
+
+        if (userNeedsSave) {
+            await this.userRepository.save(citizen.user);
         }
 
         // Return updated profile
@@ -149,5 +178,15 @@ export class UsersController {
             console.error('[DeleteAccount] ERROR:', error);
             throw error; // Rethrow to let NestJS handle it but log it first
         }
+    }
+
+    @Patch('fcm-token')
+    async updateFcmToken(
+        @CurrentUser() user: User,
+        @Body() body: { fcmToken: string }
+    ) {
+        user.fcmToken = body.fcmToken;
+        await this.userRepository.save(user);
+        return { success: true };
     }
 }

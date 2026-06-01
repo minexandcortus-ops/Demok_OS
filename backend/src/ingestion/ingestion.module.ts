@@ -21,11 +21,14 @@ import { Deputy } from '../votes/deputy.entity';
 import { OfficialVote } from '../votes/official-vote.entity';
 import { CategoriesModule } from '../laws/categories.module';
 
+import { NotificationModule } from '../notifications/notification.module';
+
 @Module({
     imports: [
         HttpModule,
         TypeOrmModule.forFeature([Law, Amendement, Constituency, Category, Candidate, Deputy, OfficialVote]),
         CategoriesModule,
+        NotificationModule,
     ],
     providers: [
         IngestionANService,

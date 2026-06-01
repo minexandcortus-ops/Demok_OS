@@ -36,6 +36,7 @@ mobile/.metadata
 .env.deploy
 backend/.env
 backend/.env.local
+backend/demok-firebase-service-account.json
 
 # Fichiers de debug et scripts one-shot (générés temporairement)
 api_dump*.json

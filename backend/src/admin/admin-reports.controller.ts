@@ -6,6 +6,7 @@ import { Report, ReportStatus, ReportCategory } from '../reports/entities/report
 import { Law, LawStatus } from '../laws/law.entity';
 import { OpinionReport } from '../debates/entities/opinion-report.entity';
 import { AdminKeyGuard } from './admin-key.guard';
+import { NotificationService } from '../notifications/notification.service';
 
 import { Citizen } from '../users/citizen.entity';
 import { VoteUrna } from '../votes/vote-choice.entity';
@@ -96,6 +97,7 @@ export class AdminLawsController {
     constructor(
         @InjectRepository(Law)
         private readonly lawRepository: Repository<Law>,
+        private readonly notificationService: NotificationService,
     ) {}
 
     /**
@@ -154,6 +156,10 @@ export class AdminLawsController {
         law.status = body.status;
         await this.lawRepository.save(law);
 
+        if (previousStatus !== law.status) {
+            await this.notificationService.notifyLawModified(law.id).catch(e => console.error('Failed to notify law modification:', e));
+        }
+
         return {
             success: true,
             message: `Loi mise à jour : ${previousStatus} → ${body.status}`,
@@ -210,6 +216,9 @@ export class AdminLawsController {
         }
 
         await this.lawRepository.save(law);
+
+        // Notify users that the law has been modified
+        await this.notificationService.notifyLawModified(law.id).catch(e => console.error('Failed to notify law modification:', e));
 
         return {
             success: true,

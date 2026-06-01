@@ -4,11 +4,13 @@ import 'firebase_options.dart';
 import 'screens/landing_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/user_session.dart';
+import 'services/push_notification_service.dart';
 import 'services/api_client.dart'; // Import navigatorKey
 import 'package:timeago/timeago.dart' as timeago;
 import 'screens/reset_password_screen.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'utils/timeago_fr_custom.dart';
+import 'screens/law_loader_screen.dart';
 
 void main() async {
   // Build buster: 2026-05-16 17:20
@@ -18,6 +20,9 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await UserSession().init();
+  if (UserSession().isLoggedIn) {
+    await PushNotificationService().init();
+  }
   timeago.setLocaleMessages('fr', FrMessagesCustom());
   runApp(const DemokApp());
 }
@@ -49,6 +54,24 @@ class DemokApp extends StatelessWidget {
           if (token != null) {
             return MaterialPageRoute(
               builder: (context) => ResetPasswordScreen(token: token),
+            );
+          }
+        }
+        
+        if (uri.path == '/surveys') {
+          return MaterialPageRoute(
+            builder: (context) => (UserSession().isLoggedIn || UserSession().isGuest) 
+              ? const HomeScreen(initialTab: 1)
+              : const LandingScreen(),
+          );
+        }
+
+        if (uri.path.startsWith('/laws/')) {
+          final parts = uri.path.split('/');
+          if (parts.length == 3) {
+            final lawId = parts[2];
+            return MaterialPageRoute(
+              builder: (context) => LawLoaderScreen(lawId: lawId),
             );
           }
         }
