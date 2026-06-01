@@ -9,6 +9,7 @@ import '../widgets/skeleton_law_card.dart';
 import '../widgets/government_modal.dart';
 import 'law_detail_screen.dart';
 import 'profile_screen.dart';
+import 'landing_screen.dart';
 import 'surveys_screen.dart';
 import 'debate_detail_screen.dart';
 import '../widgets/debate_card.dart';
@@ -188,7 +189,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   /// de cooldown est écoulée.
   void _schedulePwaBanner() {
     if (!mounted) return;
-    if (UserSession().isGuest || !UserSession().isLoggedIn) return;
+    if (!UserSession().isGuest && !UserSession().isLoggedIn) return;
     if (!UserSession().shouldShowPwaBanner) return;
     final pwa = PwaInstallService();
     if (pwa.isAlreadyInstalled) return;
@@ -662,8 +663,47 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                     },
                   ),
           ),
+
         ],
       ),  // fin Column
+          
+          // ---- Bouton Flottant Invité ----
+          if (UserSession().isGuest)
+            Positioned(
+              bottom: 24,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    UserSession().clearSession();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LandingScreen()),
+                      (route) => false,
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    elevation: 6,
+                    shadowColor: Colors.black45,
+                  ),
+                  child: const Text(
+                    'Créer un compte',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            
           // ---- Bannière PWA flottante ----
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 350),

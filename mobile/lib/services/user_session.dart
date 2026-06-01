@@ -22,10 +22,16 @@ class UserSession {
   SharedPreferences? _prefs;
 
   bool get isLoggedIn => accessToken != null;
-  bool get isGuest => _prefs?.getBool('session_isGuest') ?? false;
+  
+  bool _isGuestInMemory = false;
+  bool get isGuest => _isGuestInMemory;
   
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    
+    // Nettoyer toute ancienne persistance du mode invité
+    await _prefs?.remove('session_isGuest');
+    _isGuestInMemory = false;
     
     // Restore session variables
     userId = _prefs?.getString('session_userId');
@@ -111,8 +117,9 @@ class UserSession {
 
   // Définir le mode invité
   Future<void> setGuestMode(bool isGuest) async {
+    _isGuestInMemory = isGuest;
     if (_prefs != null) {
-      await _prefs!.setBool('session_isGuest', isGuest);
+      await _prefs!.remove('session_isGuest');
     }
   }
 
@@ -143,6 +150,7 @@ class UserSession {
       if (birthYear != null) await _prefs!.setInt('session_birthYear', birthYear);
       if (token != null) await _prefs!.setString('session_token', token);
       await _prefs!.remove('session_isGuest'); // Login clears guest mode
+      _isGuestInMemory = false;
     }
   }
   
@@ -161,6 +169,7 @@ class UserSession {
       await _prefs!.remove('session_birthYear');
       await _prefs!.remove('session_token');
       await _prefs!.remove('session_isGuest');
+      _isGuestInMemory = false;
     }
   }
 }
