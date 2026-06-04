@@ -702,7 +702,10 @@
 
     <div class="confirm-actions">
       <button class="btn-cancel" onclick="closeVoteEditor()">Annuler</button>
-      <button class="btn-primary" onclick="saveVoteResult()" style="width:auto; padding: 10px 28px;">Enregistrer</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="saveVoteResult(false)" style="background:transparent; color:var(--text); border:1px solid var(--border); width:auto; padding: 10px 16px;">Enregistrer seul</button>
+        <button class="btn-primary" onclick="saveVoteResult(true)" style="width:auto; padding: 10px 16px; background:#10b981; border-color:#10b981;">Publier & Notifier 🔔</button>
+      </div>
     </div>
   </div>
 </div>
@@ -729,7 +732,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_BASE = 'https://demok.api.votre-domaine.com';
+  const API_BASE = 'https://demok.api.votre-domaine.com/api';
   let adminKey = sessionStorage.getItem('demok_admin_key') || '';
   let allReports = [];
   let allLaws = [];
@@ -1070,7 +1073,7 @@
     editingLawId = null;
   }
 
-  async function saveVoteResult() {
+  async function saveVoteResult(notify = false) {
     const payload = {
       isMainLevee: document.getElementById('edit-is-main-levee').checked,
       pour: parseInt(document.getElementById('edit-pour').value) || 0,
@@ -1086,7 +1089,20 @@
       });
       const data = await res.json();
       if (data.success) {
-        showToast('Résultat mis à jour ✓', 'success');
+        if (notify) {
+          const notifyRes = await fetch(`${API_BASE}/admin/laws/${editingLawId}/notify-results`, {
+            method: 'POST',
+            headers: { 'x-admin-key': adminKey }
+          });
+          const notifyData = await notifyRes.json();
+          if (notifyData.success) {
+            showToast('Résultat enregistré et notifications envoyées 🔔', 'success');
+          } else {
+            showToast('Résultat enregistré mais échec notification', 'error');
+          }
+        } else {
+          showToast('Résultat mis à jour ✓', 'success');
+        }
         closeVoteEditor();
         searchLaws(); // Refresh list
       } else {
