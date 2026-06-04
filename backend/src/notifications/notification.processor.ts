@@ -52,6 +52,40 @@ export class NotificationProcessor {
     }
 
     /**
+     * Traite les notifications de résultat de vote d'une loi
+     */
+    @Process('law-voted')
+    async handleLawVoted(job: Job) {
+        const { lawId, lawTitle, resultStats, adopted } = job.data;
+        this.logger.log(`📬 Traitement résultat loi votée: ${lawTitle}`);
+
+        // Get all users who want law results notifications
+        const users = await this.userRepository.find({
+            where: { notifyLawResults: true }
+        });
+
+        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+
+        if (tokens.length > 0) {
+            const title = adopted ? "🏛️ Loi adoptée !" : "🏛️ Loi rejetée !";
+            const pour = resultStats?.pour || 0;
+            const contre = resultStats?.contre || 0;
+            const total = (pour + contre) > 0 ? (pour + contre) : 1;
+            const pourPercent = Math.round((pour / total) * 100);
+            const contrePercent = Math.round((contre / total) * 100);
+            
+            const message = `L'Assemblée a voté la loi "${lawTitle}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
+
+            await this.notificationService.sendMulticast(
+                tokens,
+                title,
+                message,
+                { type: 'LAW_MODIFIED', lawId: String(lawId) }
+            );
+        }
+    }
+
+    /**
      * Traite les notifications de nouveau sondage
      */
     @Process('new-survey')

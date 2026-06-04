@@ -25,7 +25,7 @@ export class NotificationService {
         try {
             if (!admin.apps.length) {
                 admin.initializeApp({
-                    credential: admin.credential.applicationDefault() 
+                    credential: admin.credential.applicationDefault()
                 });
                 this.isInitialized = true;
                 this.logger.log('Firebase Admin initialized successfully');
@@ -50,9 +50,9 @@ export class NotificationService {
     async sendPushNotification(fcmToken: string, title: string, body: string, data?: Record<string, string>) {
         if (!this.isInitialized || !fcmToken) return;
         try {
-            await admin.messaging().send({ 
-                notification: { title, body }, 
-                data, 
+            await admin.messaging().send({
+                notification: { title, body },
+                data,
                 token: fcmToken,
                 webpush: { fcmOptions: { link: this.getWebpushLink(data) } }
             });
@@ -116,5 +116,24 @@ export class NotificationService {
         }
 
         this.logger.log(`📬 ${votes.length} notifications ajoutées à la queue Redis`);
+    }
+
+    /**
+     * Notifie tous les utilisateurs (avec l'option activée) du résultat du vote d'une loi
+     */
+    async notifyLawVoted(lawId: string, lawTitle: string, resultStats: any, adopted: boolean): Promise<void> {
+        this.logger.log(`📢 Notification loi votée : ID ${lawId}`);
+
+        try {
+            await this.notificationQueue.add('law-voted', {
+                lawId,
+                lawTitle,
+                resultStats,
+                adopted
+            });
+            this.logger.log(`✅ Job law-voted ajouté à la queue pour la loi ${lawId}`);
+        } catch (error) {
+            this.logger.error(`❌ Erreur ajout notification law-voted queue: ${error.message}`);
+        }
     }
 }
