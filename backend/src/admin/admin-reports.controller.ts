@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { ReportsService } from '../reports/reports.service';
@@ -127,7 +127,7 @@ export class AdminLawsController {
         const [laws, total] = await this.lawRepository.findAndCount({
             where,
             select: ['id', 'externalId', 'titleOfficial', 'titleVulgarized', 'status', 'voteDate', 'deputyVoteResult', 'officialUrl'],
-            order: { voteDate: 'DESC' },
+            order: { voteDate: { direction: 'DESC', nulls: 'LAST' }, id: 'ASC' },
             take,
             skip,
         });
@@ -155,10 +155,6 @@ export class AdminLawsController {
         const previousStatus = law.status;
         law.status = body.status;
         await this.lawRepository.save(law);
-
-        if (previousStatus !== law.status) {
-            await this.notificationService.notifyLawModified(law.id).catch(e => console.error('Failed to notify law modification:', e));
-        }
 
         return {
             success: true,
@@ -217,9 +213,6 @@ export class AdminLawsController {
 
         await this.lawRepository.save(law);
 
-        // Notify users that the law has been modified
-        await this.notificationService.notifyLawModified(law.id).catch(e => console.error('Failed to notify law modification:', e));
-
         return {
             success: true,
             message: 'Résultat du vote mis à jour',
@@ -245,6 +238,33 @@ export class AdminLawsController {
             success: true,
             message: 'Lien de la loi mis à jour',
             officialUrl: law.officialUrl,
+        };
+    }
+
+    /**
+     * POST /admin/laws/:id/notify-results
+     * Envoie manuellement la notification de résultat de vote à tous les utilisateurs
+     */
+    @Post(':id/notify-results')
+    async notifyLawResults(
+        @Param('id') id: string,
+    ) {
+        const law = await this.lawRepository.findOne({ where: { id } });
+        if (!law) return { success: false, message: 'Loi introuvable' };
+
+        const stats = law.deputyVoteResult || { pour: 0, contre: 0, abstention: 0, adopted: false };
+        const adopted = stats.adopted;
+
+        await this.notificationService.notifyLawVoted(
+            law.id,
+            law.titleVulgarized || law.titleOfficial,
+            stats,
+            adopted
+        );
+
+        return {
+            success: true,
+            message: 'Notification envoyée à tous les utilisateurs.',
         };
     }
 }
