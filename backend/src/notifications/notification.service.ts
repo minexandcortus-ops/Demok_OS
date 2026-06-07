@@ -4,7 +4,10 @@ import { InjectQueue } from '@nestjs/bull';
 import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 import { VoteRegistry } from '../votes/vote-registry.entity';
+import { User } from '../users/user.entity';
 import * as admin from 'firebase-admin';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class NotificationService {
@@ -15,25 +18,45 @@ export class NotificationService {
         @InjectRepository(VoteRegistry)
         private voteRegistryRepository: Repository<VoteRegistry>,
 
+        @InjectRepository(User)
+        private userRepository: Repository<User>,
+
         @InjectQueue('notifications')
         private notificationQueue: Queue,
-    ) { 
+    ) {
         this.initializeFirebase();
     }
 
     private initializeFirebase() {
         try {
-            if (!admin.apps.length) {
-                admin.initializeApp({
-                    credential: admin.credential.applicationDefault()
-                });
+            if (admin.apps.length) {
                 this.isInitialized = true;
-                this.logger.log('Firebase Admin initialized successfully');
-            } else {
-                this.isInitialized = true;
+                return;
             }
+
+            // Résolution du chemin vers le fichier de service account
+            // On cherche d'abord via la variable d'env, sinon chemin par défaut
+            const envPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+            const defaultPath = path.resolve(__dirname, '../../demok-firebase-service-account.json');
+            const serviceAccountPath = envPath
+                ? path.resolve(process.cwd(), envPath)
+                : defaultPath;
+
+            if (!fs.existsSync(serviceAccountPath)) {
+                this.logger.error(`❌ Firebase : fichier service account introuvable à ${serviceAccountPath}`);
+                return;
+            }
+
+            const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+            });
+
+            this.isInitialized = true;
+            this.logger.log('✅ Firebase Admin initialisé avec succès');
         } catch (error) {
-            this.logger.error('Failed to init Firebase Admin', error);
+            this.logger.error('❌ Échec initialisation Firebase Admin', error);
         }
     }
 
@@ -41,7 +64,10 @@ export class NotificationService {
         if (!data) return '/';
         if (data.type === 'NEW_SURVEY' || data.type === 'SURVEY_CLOSED') {
             return '/surveys';
-        } else if (data.type === 'LAW_MODIFIED' && data.lawId) {
+        } else if (
+            (data.type === 'LAW_MODIFIED' || data.type === 'LAW_VOTED') &&
+            data.lawId
+        ) {
             return `/laws/${data.lawId}`;
         }
         return '/';
@@ -54,11 +80,20 @@ export class NotificationService {
                 notification: { title, body },
                 data,
                 token: fcmToken,
-                webpush: { fcmOptions: { link: this.getWebpushLink(data) } }
+                webpush: { fcmOptions: { link: this.getWebpushLink(data) } },
             });
-            this.logger.log(`Push sent successfully`);
+            this.logger.log('📤 Push individuel envoyé avec succès');
         } catch (error) {
-            this.logger.error('Error sending push:', error);
+            this.logger.error(`❌ Erreur envoi push : ${error.message}`);
+
+            // Nettoyer le token invalide/expiré
+            if (
+                error.code === 'messaging/invalid-registration-token' ||
+                error.code === 'messaging/registration-token-not-registered'
+            ) {
+                await this.userRepository.update({ fcmToken }, { fcmToken: null });
+                this.logger.warn(`🧹 Token FCM invalide supprimé pour token: ${fcmToken.substring(0, 20)}...`);
+            }
         }
     }
 
@@ -69,71 +104,121 @@ export class NotificationService {
                 tokens,
                 notification: { title, body },
                 data,
-                webpush: { fcmOptions: { link: this.getWebpushLink(data) } }
+                webpush: { fcmOptions: { link: this.getWebpushLink(data) } },
             });
-            this.logger.log(`Multicast sent: ${response.successCount} success, ${response.failureCount} failed`);
+
+            this.logger.log(`📤 Multicast : ${response.successCount} succès, ${response.failureCount} échec(s)`);
+
+            // Nettoyer les tokens invalides/expirés
+            if (response.failureCount > 0) {
+                const invalidTokens: string[] = [];
+                response.responses.forEach((resp, idx) => {
+                    if (!resp.success) {
+                        const code = resp.error?.code;
+                        if (
+                            code === 'messaging/invalid-registration-token' ||
+                            code === 'messaging/registration-token-not-registered'
+                        ) {
+                            invalidTokens.push(tokens[idx]);
+                        } else {
+                            this.logger.warn(`⚠️ Échec token [${idx}] : ${code}`);
+                        }
+                    }
+                });
+
+                if (invalidTokens.length > 0) {
+                    // Suppression en base des tokens expirés
+                    for (const token of invalidTokens) {
+                        await this.userRepository.update({ fcmToken: token }, { fcmToken: null });
+                    }
+                    this.logger.warn(`🧹 ${invalidTokens.length} token(s) FCM invalide(s) supprimé(s)`);
+                }
+            }
         } catch (error) {
-            this.logger.error('Error sending multicast:', error);
+            this.logger.error(`❌ Erreur multicast : ${error.message}`);
         }
     }
 
     /**
-     * Notifie tous les utilisateurs ayant voté sur une loi modifiée
-     * PHASE 3 : ACTIVÉ - Ajout dans queue Bull
+     * Notifie tous les utilisateurs ayant voté sur une loi dont le résultat est maintenant connu.
+     * Utilise un seul job multicast au lieu d'un job par utilisateur (évite N+1 sur la queue).
      */
     async notifyLawModified(lawId: string): Promise<void> {
-        this.logger.log(`📢 Notification loi modifiée : ID ${lawId}`);
+        this.logger.log(`📢 Notification loi votée : ID ${lawId}`);
 
-        // Récupérer tous les votes actifs sur cette loi
+        // Récupérer les tokens FCM directement depuis la jointure
         const votes = await this.voteRegistryRepository
             .createQueryBuilder('vote')
             .leftJoinAndSelect('vote.citizen', 'citizen')
             .leftJoinAndSelect('citizen.user', 'user')
             .leftJoinAndSelect('vote.law', 'law')
             .where('law.id = :lawId', { lawId })
+            .andWhere('user.notifyLawResults = :val', { val: true })
+            .andWhere('user.fcmToken IS NOT NULL')
             .getMany();
 
-        this.logger.log(`👥 ${votes.length} utilisateurs à notifier`);
+        const tokens = votes
+            .map(v => v.citizen?.user?.fcmToken)
+            .filter((t): t is string => !!t);
 
-        // PHASE 3 : Ajouter chaque notification dans la queue Bull
-        for (const vote of votes) {
-            try {
-                const userId = vote.citizen?.user?.id;
-                if (!userId) continue;
+        const lawTitle = votes[0]?.law?.titleOfficial || 'une loi';
 
-                await this.notificationQueue.add('law-modified', {
-                    userId: userId,
-                    lawId: lawId,
-                    lawTitle: vote.law?.titleOfficial || 'Loi sans titre',
-                    message: `La loi "${vote.law?.titleOfficial}" sur laquelle vous avez voté a été modifiée.`,
-                    type: 'LAW_MODIFIED',
-                });
+        this.logger.log(`👥 ${tokens.length} token(s) à notifier pour la loi "${lawTitle.substring(0, 50)}"`);
 
-                this.logger.log(`✅ Notification ajoutée à la queue pour user ${userId}`);
-            } catch (error) {
-                this.logger.error(`❌ Erreur ajout notification queue: ${error.message}`);
-            }
-        }
+        if (tokens.length === 0) return;
 
-        this.logger.log(`📬 ${votes.length} notifications ajoutées à la queue Redis`);
+        // Un seul job multicast au lieu de N jobs individuels
+        await this.notificationQueue.add('law-modified', {
+            tokens,
+            lawId,
+            lawTitle,
+            message: `La loi "${lawTitle}" sur laquelle vous avez voté vient d'être votée à l'Assemblée Nationale.`,
+            type: 'LAW_MODIFIED',
+        });
+
+        this.logger.log(`✅ Job multicast "law-modified" ajouté à la queue (${tokens.length} destinataires)`);
     }
 
     /**
-     * Notifie tous les utilisateurs (avec l'option activée) du résultat du vote d'une loi
+     * Notifie tous les utilisateurs (avec l'option activée) du résultat du vote d'une loi.
      */
     async notifyLawVoted(lawId: string, lawTitle: string, resultStats: any, adopted: boolean): Promise<void> {
-        this.logger.log(`📢 Notification loi votée : ID ${lawId}`);
-
+        this.logger.log(`📢 Notification résultat loi : ID ${lawId}`);
         try {
             await this.notificationQueue.add('law-voted', {
                 lawId,
                 lawTitle,
                 resultStats,
-                adopted
+                adopted,
             });
-            this.logger.log(`✅ Job law-voted ajouté à la queue pour la loi ${lawId}`);
+            this.logger.log(`✅ Job "law-voted" ajouté à la queue pour la loi ${lawId}`);
         } catch (error) {
-            this.logger.error(`❌ Erreur ajout notification law-voted queue: ${error.message}`);
+            this.logger.error(`❌ Erreur ajout notification "law-voted" : ${error.message}`);
+        }
+    }
+
+    /**
+     * Envoie une notification de nouveau sondage à tous les utilisateurs abonnés.
+     */
+    async notifyNewSurvey(pollId: string, question: string): Promise<void> {
+        this.logger.log(`📢 Notification nouveau sondage : ${question}`);
+        try {
+            await this.notificationQueue.add('new-survey', { pollId, question });
+        } catch (error) {
+            this.logger.error(`❌ Erreur ajout notification "new-survey" : ${error.message}`);
+        }
+    }
+
+    /**
+     * Envoie une notification de sondage clôturé aux participants.
+     */
+    async notifySurveyClosed(pollId: string, question: string, voterIds: string[]): Promise<void> {
+        this.logger.log(`📢 Notification sondage clôturé : ${question}`);
+        if (!voterIds || voterIds.length === 0) return;
+        try {
+            await this.notificationQueue.add('survey-closed', { pollId, question, voterIds });
+        } catch (error) {
+            this.logger.error(`❌ Erreur ajout notification "survey-closed" : ${error.message}`);
         }
     }
 }

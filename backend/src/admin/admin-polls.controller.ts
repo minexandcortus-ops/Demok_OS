@@ -3,8 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TopicPoll } from '../surveys/topic-poll.entity';
 import { AdminKeyGuard } from './admin-key.guard';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { NotificationService } from '../notifications/notification.service';
 
 @UseGuards(AdminKeyGuard)
 @Controller('admin/polls')
@@ -12,8 +11,7 @@ export class AdminPollsController {
     constructor(
         @InjectRepository(TopicPoll)
         private readonly pollRepository: Repository<TopicPoll>,
-        @InjectQueue('notifications')
-        private notificationQueue: Queue,
+        private readonly notificationService: NotificationService,
     ) {}
 
     /**
@@ -26,16 +24,23 @@ export class AdminPollsController {
             order: { createdAt: 'DESC' },
         });
 
+        const urnaRepo = this.pollRepository.manager.getRepository('SurveyUrna');
+
         return {
             total: polls.length,
-            polls: polls.map(p => ({
-                id: p.id,
-                slug: p.slug,
-                question: p.question,
-                description: p.description,
-                isActive: p.isActive,
-                totalVotes: p.votePour + p.voteNeutre + p.voteContre,
-                createdAt: p.createdAt,
+            polls: await Promise.all(polls.map(async p => {
+                const newVotesCount = await urnaRepo.count({ where: { surveyId: p.id } });
+                const legacyVotes = p.votePour + p.voteNeutre + p.voteContre;
+
+                return {
+                    id: p.id,
+                    slug: p.slug,
+                    question: p.question,
+                    description: p.description,
+                    isActive: p.isActive,
+                    totalVotes: legacyVotes + newVotesCount,
+                    createdAt: p.createdAt,
+                };
             })),
         };
     }
@@ -52,28 +57,22 @@ export class AdminPollsController {
         poll.isActive = false;
         await this.pollRepository.save(poll);
 
-        // Notify voters
-        const legacyVoterIds = poll.voters ? poll.voters.split(',').filter(id => id.length > 0) : [];
-        
-        // Fix: Also include voters from the new SurveyRegistry system
+        // Récupérer les voters : legacy (ids en string) + nouveau système SurveyRegistry
+        const legacyVoterIds = poll.voters ? poll.voters.split(',').filter(v => v.length > 0) : [];
+
         const registryRepo = this.pollRepository.manager.getRepository('SurveyRegistry');
-        const registries = await registryRepo.find({ 
+        const registries = await registryRepo.find({
             where: { surveyId: poll.id },
-            relations: ['citizen', 'citizen.user']
+            relations: ['citizen', 'citizen.user'],
         });
         const newVoterIds = registries
             .map((r: any) => r.citizen?.user?.id)
-            .filter(id => id !== undefined && id !== null);
+            .filter((id: any) => id !== undefined && id !== null);
 
         const voterIds = [...new Set([...legacyVoterIds, ...newVoterIds])];
 
-        if (voterIds.length > 0) {
-            await this.notificationQueue.add('survey-closed', {
-                pollId: poll.id,
-                question: poll.question,
-                voterIds,
-            });
-        }
+        // Centralisation via NotificationService (au lieu d'injecter la queue directement)
+        await this.notificationService.notifySurveyClosed(poll.id, poll.question, voterIds);
 
         return {
             success: true,
@@ -113,7 +112,7 @@ export class AdminPollsController {
             return { success: false, message: 'Le titre et le sous-titre sont requis.' };
         }
 
-        // Auto-generate slug from question if not provided
+        // Auto-génération du slug si non fourni
         const slug = body.slug
             ? body.slug
             : body.question
@@ -125,7 +124,6 @@ export class AdminPollsController {
                 .substring(0, 80)
                 + '-' + Date.now();
 
-        // Check uniqueness
         const existing = await this.pollRepository.findOne({ where: { slug } });
         if (existing) {
             return { success: false, message: 'Un sondage avec ce slug existe déjà.' };
@@ -144,10 +142,8 @@ export class AdminPollsController {
 
         await this.pollRepository.save(poll);
 
-        await this.notificationQueue.add('new-survey', {
-            pollId: poll.id,
-            question: poll.question,
-        });
+        // Centralisation via NotificationService
+        await this.notificationService.notifyNewSurvey(poll.id, poll.question);
 
         return {
             success: true,

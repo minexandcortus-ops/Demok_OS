@@ -28,10 +28,8 @@ import { TopicPoll } from './surveys/topic-poll.entity';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { NotificationModule } from './notifications/notification.module';
 import { AdminModule } from './admin/admin.module';
-import { DebatesModule } from './debates/debates.module';
-import { Opinion } from './debates/entities/opinion.entity';
-import { OpinionMoke } from './debates/entities/opinion-moke.entity';
-import { OpinionReport } from './debates/entities/opinion-report.entity';
+import { DeputiesModule } from './deputies/deputies.module';
+
 import { GovernmentModule } from './government/government.module';
 import { ReportsModule } from './reports/reports.module';
 import { Report } from './reports/entities/report.entity';
@@ -58,7 +56,7 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
                 Law, LawFavorite, User, Citizen, Constituency, 
                 VoteRegistry, VoteUrna, Deputy, OfficialVote, 
                 CitizenLevel, Category, Amendement, Candidate, 
-                PresidentialVote, Opinion, OpinionMoke, OpinionReport, TopicPoll,
+                PresidentialVote, TopicPoll,
                 Report, SurveyRegistry, SurveyUrna
             ],
             synchronize: process.env.NODE_ENV !== 'production', // Use migrations in production
@@ -74,7 +72,8 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
         SchedulerModule,
         NotificationModule,
         AdminModule,
-        DebatesModule,
+        DeputiesModule,
+
         GovernmentModule,
         ReportsModule,
     ],

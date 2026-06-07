@@ -4,7 +4,7 @@ import { Repository, ILike } from 'typeorm';
 import { ReportsService } from '../reports/reports.service';
 import { Report, ReportStatus, ReportCategory } from '../reports/entities/report.entity';
 import { Law, LawStatus } from '../laws/law.entity';
-import { OpinionReport } from '../debates/entities/opinion-report.entity';
+
 import { AdminKeyGuard } from './admin-key.guard';
 import { NotificationService } from '../notifications/notification.service';
 
@@ -18,8 +18,7 @@ export class AdminReportsController {
         private readonly reportsService: ReportsService,
         @InjectRepository(Law)
         private readonly lawRepository: Repository<Law>,
-        @InjectRepository(OpinionReport)
-        private readonly opinionReportRepository: Repository<OpinionReport>,
+
         @InjectRepository(Citizen)
         private readonly citizenRepository: Repository<Citizen>,
         @InjectRepository(VoteUrna)
@@ -37,30 +36,7 @@ export class AdminReportsController {
         // 1. Fetch general reports
         const reports = await this.reportsService.findAll(status);
         
-        // 2. Fetch opinion reports
         let mergedReports = [...reports];
-        
-        if (!status || status === ReportStatus.PENDING) {
-            const opinionReports = await this.opinionReportRepository.find({
-                relations: ['opinion', 'opinion.law'],
-                order: { createdAt: 'DESC' }
-            });
-            
-            const mappedOpinionReports = opinionReports.map(or => ({
-                id: or.id,
-                lawId: or.opinion?.lawId || 'N/A',
-                userId: or.userId,
-                category: 'ARGUMENT' as any,
-                description: `[SIGNALEMENT AVIS] Commentaire de l'utilisateur: "${or.opinion?.content || 'Contenu inconnu'}"`,
-                status: ReportStatus.PENDING,
-                createdAt: or.createdAt,
-                isOpinionReport: true,
-                opinionId: or.opinionId
-            }));
-            
-            mergedReports = [...mappedOpinionReports, ...reports];
-            mergedReports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        }
 
         // 3. Count global stats
         const usersCount = await this.citizenRepository.count();

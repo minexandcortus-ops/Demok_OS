@@ -21,6 +21,7 @@ async function bootstrap() {
     const webBuildPath = join(process.cwd(), '..', 'mobile', 'build', 'web');
     app.useStaticAssets(webBuildPath);
     
+    
     // Fallback to index.html for SPA routing
     app.use((req: any, res: any, next: any) => {
         if (req.method === 'GET' && !req.path.startsWith('/api')) {

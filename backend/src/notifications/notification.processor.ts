@@ -7,7 +7,7 @@ import { User } from '../users/user.entity';
 import { NotificationService } from './notification.service';
 
 /**
- * Processor pour traiter les notifications dans la queue Redis
+ * Processor pour traiter les notifications dans la queue Redis/Bull.
  */
 @Processor('notifications')
 export class NotificationProcessor {
@@ -20,156 +20,161 @@ export class NotificationProcessor {
     ) {}
 
     /**
-     * Traite les notifications de modification de loi
+     * Traite les notifications de modification/résultat d'une loi.
+     * Le job reçoit maintenant un tableau de tokens (multicast) au lieu d'un userId unique.
      */
     @Process('law-modified')
     async handleLawModified(job: Job) {
-        const { userId, lawId, lawTitle, message } = job.data;
+        const { tokens, userId, lawId, lawTitle, message } = job.data;
 
-        this.logger.log(`📬 Traitement notification pour user ${userId}`);
-
-        const user = await this.userRepository.findOne({ where: { id: userId } });
-        if (user && user.fcmToken && user.notifyLawResults) {
-            await this.notificationService.sendPushNotification(
-                user.fcmToken,
-                'Loi modifiée',
+        // Support du nouveau format (tokens[]) et de l'ancien format (userId) pour compatibilité
+        if (tokens && Array.isArray(tokens)) {
+            this.logger.log(`📬 Traitement notification multicast loi modifiée (${tokens.length} destinataires)`);
+            await this.notificationService.sendMulticast(
+                tokens,
+                'Résultat de vote',
                 message,
-                { type: 'LAW_MODIFIED', lawId }
+                { type: 'LAW_MODIFIED', lawId: String(lawId) },
             );
+        } else if (userId) {
+            // Ancien format : un job = un utilisateur
+            this.logger.log(`📬 Traitement notification individuelle pour user ${userId}`);
+            const user = await this.userRepository.findOne({ where: { id: userId } });
+            if (user?.fcmToken && user.notifyLawResults) {
+                await this.notificationService.sendPushNotification(
+                    user.fcmToken,
+                    'Résultat de vote',
+                    message,
+                    { type: 'LAW_MODIFIED', lawId: String(lawId) },
+                );
+            }
         }
 
-        // Simuler un délai de traitement
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        this.logger.log(`✅ Notification traitée pour user ${userId}`);
-
-        return {
-            success: true,
-            userId,
-            lawId,
-            timestamp: new Date().toISOString(),
-        };
+        this.logger.log(`✅ Job "law-modified" traité (loi: ${lawId})`);
+        return { success: true, lawId, timestamp: new Date().toISOString() };
     }
 
     /**
-     * Traite les notifications de résultat de vote d'une loi
+     * Traite les notifications de résultat de vote d'une loi (envoyé à TOUS les abonnés).
      */
     @Process('law-voted')
     async handleLawVoted(job: Job) {
         const { lawId, lawTitle, resultStats, adopted } = job.data;
-        this.logger.log(`📬 Traitement résultat loi votée: ${lawTitle}`);
+        this.logger.log(`📬 Traitement résultat loi votée : ${lawTitle}`);
 
-        // Get all users who want law results notifications
         const users = await this.userRepository.find({
-            where: { notifyLawResults: true }
+            where: { notifyLawResults: true },
         });
 
-        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+        const tokens = users.map(u => u.fcmToken).filter((t): t is string => !!t);
 
         if (tokens.length > 0) {
-            const title = adopted ? "🏛️ Loi adoptée !" : "🏛️ Loi rejetée !";
+            const title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
             const pour = resultStats?.pour || 0;
             const contre = resultStats?.contre || 0;
             const total = (pour + contre) > 0 ? (pour + contre) : 1;
             const pourPercent = Math.round((pour / total) * 100);
             const contrePercent = Math.round((contre / total) * 100);
-            
+
             const message = `L'Assemblée a voté la loi "${lawTitle}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
 
+            // FIX : type corrigé de 'LAW_MODIFIED' → 'LAW_VOTED'
             await this.notificationService.sendMulticast(
                 tokens,
                 title,
                 message,
-                { type: 'LAW_MODIFIED', lawId: String(lawId) }
+                { type: 'LAW_VOTED', lawId: String(lawId) },
             );
         }
+
+        this.logger.log(`✅ Job "law-voted" traité pour la loi ${lawId} (${tokens.length} destinataires)`);
+        return { success: true, lawId, timestamp: new Date().toISOString() };
     }
 
     /**
-     * Traite les notifications de nouveau sondage
+     * Traite les notifications de nouveau sondage.
      */
     @Process('new-survey')
     async handleNewSurvey(job: Job) {
         const { pollId, question } = job.data;
-        this.logger.log(`📬 Traitement nouveau sondage: ${question}`);
+        this.logger.log(`📬 Traitement nouveau sondage : ${question}`);
 
-        // Get all users who want new survey notifications
         const users = await this.userRepository.find({
-            where: { notifyNewSurveys: true }
+            where: { notifyNewSurveys: true },
         });
 
-        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+        const tokens = users.map(u => u.fcmToken).filter((t): t is string => !!t);
 
         if (tokens.length > 0) {
             await this.notificationService.sendMulticast(
                 tokens,
-                'Nouveau Sondage',
+                '🗳️ Nouveau Sondage',
                 `Un nouveau sondage est disponible : "${question}"`,
-                { type: 'NEW_SURVEY', pollId: String(pollId) }
+                { type: 'NEW_SURVEY', pollId: String(pollId) },
             );
         }
+
+        this.logger.log(`✅ Job "new-survey" traité (${tokens.length} destinataires)`);
+        return { success: true, pollId, timestamp: new Date().toISOString() };
     }
 
     /**
-     * Traite les notifications de sondage clôturé
+     * Traite les notifications de sondage clôturé (uniquement aux participants).
      */
     @Process('survey-closed')
     async handleSurveyClosed(job: Job) {
         const { pollId, question, voterIds } = job.data;
-        this.logger.log(`📬 Traitement sondage clôturé: ${question}`);
+        this.logger.log(`📬 Traitement sondage clôturé : ${question}`);
 
         if (!voterIds || voterIds.length === 0) return;
 
-        const users = await this.userRepository.createQueryBuilder('user')
+        const users = await this.userRepository
+            .createQueryBuilder('user')
             .where('user.id IN (:...ids)', { ids: voterIds })
             .andWhere('user.notifySurveyResults = :val', { val: true })
+            .andWhere('user.fcmToken IS NOT NULL')
             .getMany();
 
-        const tokens = users.map(u => u.fcmToken).filter(t => !!t);
+        const tokens = users.map(u => u.fcmToken).filter((t): t is string => !!t);
 
         if (tokens.length > 0) {
             await this.notificationService.sendMulticast(
                 tokens,
-                'Résultats du sondage',
+                '📊 Résultats du sondage',
                 `Le sondage auquel vous avez participé est clôturé : "${question}"`,
-                { type: 'SURVEY_CLOSED', pollId: String(pollId) }
+                { type: 'SURVEY_CLOSED', pollId: String(pollId) },
             );
         }
+
+        this.logger.log(`✅ Job "survey-closed" traité (${tokens.length} destinataires)`);
+        return { success: true, pollId, timestamp: new Date().toISOString() };
     }
 
     /**
-     * Traite les notifications génériques
+     * Traite les notifications génériques (ex: annonces admin).
      */
     @Process('generic')
     async handleGenericNotification(job: Job) {
         const { userId, title, body, data } = job.data;
-
         this.logger.log(`📬 Notification générique pour user ${userId}`);
-        this.logger.log(`   📌 Titre: ${title}`);
-        this.logger.log(`   📝 Corps: ${body}`);
 
-        // PHASE 3 : Logs uniquement
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (user?.fcmToken) {
+            await this.notificationService.sendPushNotification(
+                user.fcmToken,
+                title,
+                body,
+                data,
+            );
+        } else {
+            this.logger.warn(`⚠️ User ${userId} introuvable ou sans token FCM`);
+        }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        this.logger.log(`✅ Notification générique traitée`);
-
-        return {
-            success: true,
-            userId,
-            timestamp: new Date().toISOString(),
-        };
+        this.logger.log(`✅ Notification générique traitée pour user ${userId}`);
+        return { success: true, userId, timestamp: new Date().toISOString() };
     }
 
-    /**
-     * Gestion des erreurs
-     */
-    @Process()
-    async handleError(job: Job) {
-        this.logger.error(`❌ Erreur lors du traitement du job ${job.id}`);
-        this.logger.error(`   Type: ${job.name}`);
-        this.logger.error(`   Data: ${JSON.stringify(job.data)}`);
-
-        throw new Error(`Failed to process job ${job.id}`);
-    }
+    // NOTE : Le handler @Process() sans nom a été supprimé volontairement.
+    // Il servait de "fallback" et capturait TOUS les jobs non reconnus en les faisant crasher,
+    // provoquant des boucles de retry infinis dans Bull.
 }

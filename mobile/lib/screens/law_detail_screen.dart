@@ -12,7 +12,6 @@ import '../widgets/xp_notification.dart';
 import 'dart:collection';
 import '../services/api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'debate_detail_screen.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../widgets/report_error_dialog.dart';
 import '../widgets/showcase_helper.dart';
@@ -70,7 +69,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   bool _isLoadingFavorite = false;
 
   final ScrollController _scrollController = ScrollController(); // For auto-scroll after vote
-  final GlobalKey _debateBtnKey = GlobalKey();
   final GlobalKey _voteButtonsKey = GlobalKey();
 
   @override
@@ -84,7 +82,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) {
             ShowCaseWidget.of(context).startShowCase([
-              _debateBtnKey,
               if (!UserSession().isGuest && ((widget.law.isVotable && !_hasVoted) || _isModifyingVote)) _voteButtonsKey,
             ]);
           }
@@ -296,26 +293,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                   tooltip: 'Mettre en favori',
                   onPressed: _toggleFavorite,
                 ),
-                DemokShowcase(
-                  key: _debateBtnKey,
-                  description: "Rejoignez le forum dédié à cette loi pour échanger avec les autres citoyens.",
-                  child: IconButton(
-                    icon: Icon(Icons.forum_outlined, color: UserSession().isGuest ? Colors.grey[400] : AppColors.primaryBlue),
-                    tooltip: 'Voir le débat',
-                    onPressed: UserSession().isGuest ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Inscrivez-vous pour rejoindre les débats !')),
-                      );
-                    } : () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DebateDetailScreen(law: widget.law),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+
                 IconButton(
                   icon: const Icon(Icons.outlined_flag, color: Colors.grey),
                   tooltip: 'Signaler une erreur',
@@ -445,7 +423,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
       ),
       child: Column(
         children: [
-          const Text('Inscrivez-vous pour voter et débattre !', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text('Inscrivez-vous pour voter !', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -526,6 +504,21 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               ),
             );
           }).toList(),
+          if (_isSummaryExpanded || !(widget.law.summary!.sections.length > 1 || (widget.law.summary!.sections.values.first.length > 150)))
+            const Padding(
+              padding: EdgeInsets.only(top: 4.0, bottom: 4.0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Généré par Mistral IA',
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
           if (widget.law.summary!.sections.length > 1 || (widget.law.summary!.sections.values.first.length > 150))
             TextButton(
               onPressed: () {

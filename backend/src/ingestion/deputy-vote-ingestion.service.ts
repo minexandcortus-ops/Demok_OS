@@ -89,6 +89,28 @@ export class DeputyVoteIngestionService {
         const dossiersMap = await this.fetchDossiers();
         this.logger.log(`📊 ${scrutins.length} scrutins et ${dossiersMap.size} dossiers disponibles.`);
 
+        // NOUVEAU: Récupérer la liste globale des scrutins récents (évite l'erreur 429)
+        const recentScrutins = await this.dynScraperService.scrapeRecentScrutinsList();
+        const enrichedRecentScrutins = [];
+        
+        if (recentScrutins.length > 0 && allLaws.some(l => 
+            (l.status === LawStatus.PENDING) || 
+            ([LawStatus.VOTED_AN, LawStatus.REJECTED].includes(l.status) && !l.deputyVoteResult)
+        )) {
+            this.logger.log(`📥 Pré-chargement des détails de ${Math.min(15, recentScrutins.length)} scrutins récents pour obtenir les références (slugs)...`);
+            for (const s of recentScrutins.slice(0, 15)) {
+                try {
+                    const details = await this.dynScraperService.scrapeScrutinDetails(s.id);
+                    if (details) {
+                        enrichedRecentScrutins.push({ ...s, details });
+                    }
+                    await new Promise(r => setTimeout(r, 800)); // Pause anti-429
+                } catch(e) {
+                    this.logger.warn(`⚠️ Échec pré-chargement scrutin ${s.id}: ${e.message}`);
+                }
+            }
+        }
+
         let resolved = 0;
         let skipped = 0;
         let errors = 0;
@@ -101,35 +123,7 @@ export class DeputyVoteIngestionService {
                     ? Math.floor((today.getTime() - agendaDate.getTime()) / (1000 * 60 * 60 * 24))
                     : 999;
 
-                // 1. TENTATIVE DE SCRAPING DYNAMIQUE TEMPS RÉEL (Priorité Haute)
-                let dynamicScrapedSuccess = false;
-                try {
-                    const cleanId = (law.externalId || '').replace(/^AN_/, '');
-                    const dossierUrl = law.officialUrl || `https://www.assemblee-nationale.fr/dyn/17/dossiers/${cleanId}`;
-                    const scrutinId = await this.dynScraperService.scrapeScrutinIdFromDossier(dossierUrl);
-                    if (scrutinId) {
-                        const details = await this.dynScraperService.scrapeScrutinDetails(scrutinId);
-                        if (details) {
-                            (details as any).scrutinId = scrutinId;
-                            this.logger.log(`⚡ [DynScraper] Scrutin temps-réel ${scrutinId} trouvé et analysé pour "${law.titleOfficial.substring(0, 50)}..."`);
-                            await this.applyDynScrapedResult(law, details);
-                            
-                            this.amendementIngestionService.ingestAmendements(law).catch(e =>
-                                this.logger.warn(`⚠️ Re-sync amendements après vote dynamique : ${e.message}`)
-                            );
-                            resolved++;
-                            dynamicScrapedSuccess = true;
-                        }
-                    }
-                } catch (dynError) {
-                    this.logger.warn(`⚠️ Échec du scraping dynamique pour "${law.externalId}", bascule sur l'OpenData : ${dynError.message}`);
-                }
-
-                if (dynamicScrapedSuccess) {
-                    continue; // On passe à la loi suivante car celle-ci a été entièrement résolue en temps réel !
-                }
-
-                // 2. BACKUP / SECONDE CHANCE : MÉTHODE CLASSIQUE PAR ZIP OPENDATA
+                // 1. TENTATIVE VIA OPENDATA (ZIP)
                 const scrutin = scrutins.length > 0 ? this.findMatchingScrutin(law, scrutins) : null;
 
                 if (scrutin) {
@@ -140,8 +134,48 @@ export class DeputyVoteIngestionService {
                         this.logger.warn(`⚠️ Re-sync amendements après vote officiel : ${e.message}`)
                     );
                     resolved++;
-                } else {
-                    let scrapedFound = false;
+                    continue;
+                }
+
+                // 2. BACKUP : RECHERCHE DANS LA LISTE DES DERNIERS SCRUTINS DE L'AN
+                let dynamicScrapedSuccess = false;
+                if (enrichedRecentScrutins.length > 0) {
+                    const lawTitleNorm = this.normalizeTitle(law.titleOfficial || '');
+                    
+                    // a) Match par dossierSlug (très fiable)
+                    let match = enrichedRecentScrutins.find(s => {
+                        if (!s.details.dossierSlug) return false;
+                        const slugWords = s.details.dossierSlug.replace('17e', '').replace('17', '').split('_').filter(w => w.length > 3);
+                        return slugWords.length > 0 && slugWords.every(w => lawTitleNorm.includes(w));
+                    });
+
+                    // b) Match par similitude de titre
+                    if (!match) {
+                        match = enrichedRecentScrutins.find(s => {
+                            const scrutinTitleNorm = this.normalizeTitle(s.title);
+                            return this.similarity(lawTitleNorm, scrutinTitleNorm) > 0.75;
+                        });
+                    }
+
+                    if (match) {
+                        this.logger.log(`⚡ [DynScraper] Scrutin récent ${match.id} trouvé dans la liste pour "${law.titleOfficial.substring(0, 50)}..."`);
+                        (match.details as any).scrutinId = match.id;
+                        await this.applyDynScrapedResult(law, match.details);
+                        
+                        this.amendementIngestionService.ingestAmendements(law).catch(e =>
+                            this.logger.warn(`⚠️ Re-sync amendements après vote dynamique : ${e.message}`)
+                        );
+                        resolved++;
+                        dynamicScrapedSuccess = true;
+                    }
+                }
+
+                if (dynamicScrapedSuccess) {
+                    continue;
+                }
+
+                // 3. BACKUP ULTIME : RECHERCHE DANS LES COMPTES-RENDUS
+                let scrapedFound = false;
                     if (law.agendaDate) {
                         this.logger.log(`🔍 Aucun scrutin public dans le ZIP pour "${law.externalId}". Tentative de scraping des CR du ${law.agendaDate}...`);
                         const scraped = await this.crScrapingService.scrapeResultsFromDay(new Date(law.agendaDate), law);
@@ -158,7 +192,6 @@ export class DeputyVoteIngestionService {
                         this.logger.log(`⏳ Discussion toujours en cours pour "${law.externalId}" (${statusLabel}), en attente de scrutin.`);
                         skipped++;
                     }
-                }
             } catch (error) {
                 this.logger.error(`❌ Erreur sur loi ${law.externalId}: ${error.message}`);
                 errors++;

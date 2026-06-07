@@ -11,12 +11,10 @@ import 'law_detail_screen.dart';
 import 'profile_screen.dart';
 import 'landing_screen.dart';
 import 'surveys_screen.dart';
-import 'debate_detail_screen.dart';
-import '../widgets/debate_card.dart';
+import 'deputy_list_screen.dart';
 import '../widgets/survey_card.dart';
 import '../widgets/topic_poll_card.dart';
 import '../services/api_client.dart';
-import '../services/debate_service.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../widgets/showcase_helper.dart';
 import '../services/pwa_install_service.dart';
@@ -68,16 +66,13 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   List<Map<String, dynamic>> _topicPolls = [];
   bool _showPwaBanner = false;
 
-  // Données spécifiques à l'onglet Débats
-  List<Law> _activeDebateLaws = [];
-  bool _isLoadingDebates = false;
+
 
   // Pagination states
   int _currentPage = 1;
   bool _hasMoreLaws = true;
   bool _isLoadingMore = false;
   final ScrollController _lawsScrollController = ScrollController();
-  final ScrollController _debatesScrollController = ScrollController();
   double _savedScrollOffset = 0.0;
 
   final GlobalKey _govKey = GlobalKey();
@@ -86,8 +81,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   final GlobalKey _lawKey = GlobalKey();
   final GlobalKey _profileKey = GlobalKey();
   final GlobalKey _surveyTabKey = GlobalKey();
-  final GlobalKey _debateTabKey = GlobalKey();
-  final GlobalKey _firstDebateKey = GlobalKey();
+  final GlobalKey _deputyTabKey = GlobalKey();
   bool _showFavoritesOnly = false;
   bool _showVotedOnly = false;
 
@@ -97,7 +91,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     _selectedTabIndex = widget.initialTab;
     _fetchLaws();
     _fetchTopicPolls();
-    _fetchActiveDebates();
+
 
     _lawsScrollController.addListener(() {
       if (_lawsScrollController.position.pixels >= _lawsScrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMoreLaws) {
@@ -105,11 +99,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
       }
     });
 
-    _debatesScrollController.addListener(() {
-      if (_debatesScrollController.position.pixels >= _debatesScrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMoreLaws) {
-        _loadMoreLaws();
-      }
-    });
+
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!UserSession().hasSeenHomeShowcase && !_isLoading && _laws.isNotEmpty) {
@@ -177,7 +167,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
       if (_laws.isNotEmpty) _lawKey,
       _profileKey,
       _surveyTabKey,
-      _debateTabKey,
+      _deputyTabKey,
     ];
     
     ShowCaseWidget.of(context).startShowCase(keys);
@@ -212,7 +202,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     _debounce?.cancel();
     _pwaBannerTimer?.cancel();
     _lawsScrollController.dispose();
-    _debatesScrollController.dispose();
+
     super.dispose();
   }
 
@@ -230,22 +220,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     }
   }
 
-  Future<void> _fetchActiveDebates() async {
-    if (!mounted) return;
-    setState(() => _isLoadingDebates = true);
-    try {
-      final laws = await DebateService.getActiveLaws(limit: 30);
-      if (mounted) {
-        setState(() {
-          _activeDebateLaws = laws;
-          _isLoadingDebates = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching active debates: $e');
-      if (mounted) setState(() => _isLoadingDebates = false);
-    }
-  }
+
 
 
   void _onSearchChanged(String query) {
@@ -463,8 +438,9 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         children: [
           Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          if (_selectedTabIndex == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: DemokShowcase(
               key: _searchKey,
               description: "Recherchez une loi spécifique par mot-clé.",
@@ -606,59 +582,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                           ],
                         );
                       } else {
-                        // Onglet Débats — utilise le feed dédié
-                        if (_isLoadingDebates) {
-                          return ListView.builder(
-                            itemCount: 5,
-                            padding: const EdgeInsets.only(bottom: 16),
-                            itemBuilder: (context, index) => const SkeletonLawCard(),
-                          );
-                        }
-                        return _activeDebateLaws.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.forum_outlined, size: 64, color: Colors.grey[300]),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'Aucun débat disponible',
-                                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : RefreshIndicator(
-                                onRefresh: _fetchActiveDebates,
-                                child: ListView.builder(
-                                  controller: _debatesScrollController,
-                                  itemCount: _activeDebateLaws.length,
-                                  padding: const EdgeInsets.only(bottom: 16),
-                                  itemBuilder: (context, index) {
-                                    final card = DebateCard(
-                                      law: _activeDebateLaws[index],
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => DebateDetailScreen(law: _activeDebateLaws[index]),
-                                          ),
-                                        );
-                                      },
-                                    );
-
-                                    if (index == 0) {
-                                      return DemokShowcase(
-                                        key: _firstDebateKey,
-                                        description: "Entrez dans l'hémicycle : suivez les échanges de la communauté Démok et donnez votre avis.",
-                                        child: card,
-                                      );
-                                    }
-
-                                    return card;
-                                  },
-                                ),
-                              );
+                        return const DeputyListScreen();
                       }
                     },
                   ),
@@ -747,16 +671,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
             _selectedTabIndex = index;
           });
 
-          if (index == 2 && !UserSession().hasSeenDebatesShowcase && _laws.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (mounted) {
-                  ShowCaseWidget.of(context).startShowCase([_firstDebateKey]);
-                  UserSession().setDebatesShowcaseSeen();
-                }
-              });
-            });
-          }
+
         },
         items: [
           const BottomNavigationBarItem(
@@ -774,12 +689,12 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
           ),
           BottomNavigationBarItem(
             icon: DemokShowcase(
-              key: _debateTabKey,
-              description: "Suivez les débats et les échanges de la communauté Démok.",
+              key: _deputyTabKey,
+              description: "Découvrez les députés de l'Assemblée nationale.",
               targetShapeBorder: const CircleBorder(),
-              child: Icon(Icons.groups, color: UserSession().isGuest ? Colors.grey[400] : null),
+              child: Icon(Icons.people, color: UserSession().isGuest ? Colors.grey[400] : null),
             ),
-            label: 'Débats',
+            label: 'Députés',
           ),
         ],
       ),

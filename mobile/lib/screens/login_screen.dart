@@ -211,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.text,
                   decoration: InputDecoration(
-                    labelText: 'Pseudo',
+                    labelText: 'Pseudo ou Email',
                     prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),

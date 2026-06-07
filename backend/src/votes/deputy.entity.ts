@@ -19,6 +19,9 @@ export class Deputy {
     fullName: string;
 
     @Column({ nullable: true })
+    lastName: string;
+
+    @Column({ nullable: true })
     constituencyCode: string; // e.g., "75-01"
 
     @Column({ nullable: true })
@@ -29,4 +32,22 @@ export class Deputy {
      */
     @Column({ nullable: true })
     groupePolitique: string;
+
+    @Column({ nullable: true })
+    photoUrl: string;
+
+    @Column('text', { nullable: true })
+    bio: string;
+
+    @Column({ nullable: true })
+    department: string;
+
+    @Column({ default: true })
+    isActive: boolean;
+
+    @Column({ default: 0 })
+    presenceWeeks: number;
+
+    @Column({ default: 0 })
+    votesCount: number;
 }

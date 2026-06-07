@@ -11,6 +11,7 @@ export interface ScrapedScrutinDetails {
     total: number;
     adopted: boolean;
     dateScrutin: string;
+    dossierSlug?: string;
     groupVotes: Array<{
         groupName: string;
         groupOrganId: string;
@@ -27,6 +28,39 @@ export class DynScraperService {
     private readonly logger = new Logger(DynScraperService.name);
 
     constructor(private readonly httpService: HttpService) {}
+
+    /**
+     * Scrape la liste des derniers scrutins (ex: pour pallier le délai de l'OpenData)
+     */
+    async scrapeRecentScrutinsList(): Promise<{ id: string, title: string }[]> {
+        const url = 'https://www.assemblee-nationale.fr/dyn/17/scrutins';
+        this.logger.log(`🔍 Récupération de la liste globale des scrutins : ${url}`);
+        try {
+            const response = await firstValueFrom(
+                this.httpService.get(url, {
+                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                    timeout: 10000
+                })
+            );
+            const $ = cheerio.load(response.data);
+            const list: { id: string, title: string }[] = [];
+            $('a[href^="/dyn/17/scrutins/"]').each((_, el) => {
+                const href = $(el).attr('href');
+                const title = $(el).text().trim();
+                if (title.length > 20 && !title.includes("Analyse complète du scrutin")) {
+                    const id = href.split('/').pop();
+                    if (id) {
+                        list.push({ id, title });
+                    }
+                }
+            });
+            this.logger.log(`🎯 ${list.length} scrutins récents trouvés sur la page globale.`);
+            return list;
+        } catch (error) {
+            this.logger.error(`❌ Impossible de récupérer la liste des scrutins : ${error.message}`);
+            return [];
+        }
+    }
 
     /**
      * Scrape l'ID du scrutin public depuis la page du dossier législatif de la 17e législature.
@@ -159,12 +193,18 @@ export class DynScraperService {
                 let value = 0;
                 labels.forEach(label => {
                     $(`span:contains("${label}")`).each((_, element) => {
-                        const nextSpan = $(element).next('span');
-                        if (nextSpan.length > 0) {
-                            const valText = nextSpan.text().replace(/\s/g, '').replace(':', '');
-                            const parsed = parseInt(valText, 10);
-                            if (!isNaN(parsed)) {
-                                value = parsed;
+                        const bTag = $(element).find('b');
+                        if (bTag.length > 0) {
+                            const parsed = parseInt(bTag.text().trim(), 10);
+                            if (!isNaN(parsed)) value = parsed;
+                        } else {
+                            const nextSpan = $(element).next('span');
+                            if (nextSpan.length > 0) {
+                                const valText = nextSpan.text().replace(/\s/g, '').replace(':', '');
+                                const parsed = parseInt(valText, 10);
+                                if (!isNaN(parsed)) {
+                                    value = parsed;
+                                }
                             }
                         }
                     });
@@ -237,7 +277,19 @@ export class DynScraperService {
                 }
             });
 
-            this.logger.log(`✅ Scrutin ${scrutinId} parsé avec succès. Adopté: ${adopted}. Votes individuels extraits: ${groupVotes.reduce((sum, g) => sum + g.votes.length, 0)} députés.`);
+            // 4. Extraire le slug du dossier
+            let dossierSlug: string | undefined;
+            $('a').each((_, el) => {
+                const href = $(el).attr('href');
+                if (href && href.includes('/dossiers/')) {
+                    const parts = href.split('/dossiers/');
+                    if (parts.length > 1) {
+                        dossierSlug = parts[1].split('?')[0].replace('/', '');
+                    }
+                }
+            });
+
+            this.logger.log(`✅ Scrutin ${scrutinId} parsé avec succès. Adopté: ${adopted}. Votes individuels: ${groupVotes.reduce((sum, g) => sum + g.votes.length, 0)}. Dossier: ${dossierSlug}`);
 
             return {
                 pour,
@@ -246,6 +298,7 @@ export class DynScraperService {
                 total,
                 adopted,
                 dateScrutin,
+                dossierSlug,
                 groupVotes
             };
         } catch (error) {

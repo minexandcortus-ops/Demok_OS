@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: demok_backend
     restart: always
-    shm_size: '2gb'
+    shm_size: '256mb'
     environment:
       - PORT=3000
       - DATABASE_HOST=db

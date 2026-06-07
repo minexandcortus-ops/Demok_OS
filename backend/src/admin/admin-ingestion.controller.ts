@@ -5,9 +5,12 @@ import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
 import { IngestionHtmlAgendaService } from '../ingestion/ingestion-html-agenda.service';
 import { SummaryUpdaterService } from '../ingestion/summary-updater.service';
+import { DynScraperService } from '../ingestion/dyn-scraper.service';
+import { DeputySyncService } from '../ingestion/deputy-sync.service';
 import { DeputyVoteIngestionService } from '../ingestion/deputy-vote-ingestion.service';
 import { AmendementIngestionService } from '../ingestion/amendement-ingestion.service';
 import { DocumentIngestionService } from '../ingestion/document-ingestion.service';
+import { IngestionANService } from '../ingestion/ingestion-an.service';
 import { AdminKeyGuard } from './admin-key.guard';
 
 @UseGuards(AdminKeyGuard)
@@ -20,6 +23,8 @@ export class AdminIngestionController {
         private summaryUpdaterService: SummaryUpdaterService,
         private deputyVoteIngestionService: DeputyVoteIngestionService,
         private amendementIngestionService: AmendementIngestionService,
+        private readonly ingestionAnService: IngestionANService,
+        private readonly deputySyncService: DeputySyncService,
         private documentIngestionService: DocumentIngestionService,
         @InjectRepository(Law)
         private lawRepository: Repository<Law>,
@@ -52,18 +57,21 @@ export class AdminIngestionController {
     async syncDeputyVotes(@Query('force') force: string) {
         const isForce = force === 'true';
         this.logger.log(`🗳️ Déclenchement manuel de la synchronisation des votes des députés (Force: ${isForce})`);
-        try {
-            const result = await this.deputyVoteIngestionService.syncDeputyVotes(isForce);
-            return {
-                success: true,
-                message: `Synchronisation terminée : ${result.resolved} lois résolues, ${result.skipped} en attente, ${result.errors} erreurs`,
-                details: result,
-                timestamp: new Date().toISOString(),
-            };
-        } catch (error) {
-            this.logger.error('Erreur lors de la synchronisation des votes', error);
-            return { success: false, message: error.message, timestamp: new Date().toISOString() };
-        }
+
+        // Exécution en arrière-plan pour éviter le timeout nginx (synchro ~2-3 min)
+        this.deputyVoteIngestionService.syncDeputyVotes(isForce)
+            .then(result => {
+                this.logger.log(`✅ Sync votes terminée : ${result.resolved} résolues, ${result.skipped} en attente, ${result.errors} erreurs`);
+            })
+            .catch(error => {
+                this.logger.error('Erreur lors de la synchronisation des votes (arrière-plan)', error);
+            });
+
+        return {
+            success: true,
+            message: `Synchronisation des votes lancée en arrière-plan (force: ${isForce}). Consultez les logs du serveur pour le résultat.`,
+            timestamp: new Date().toISOString(),
+        };
     }
 
     /**
@@ -152,5 +160,11 @@ export class AdminIngestionController {
         });
         const totalAmendements = await this.amendementRepository.count();
         return { totalLaws, ingestedLaws, totalAmendements, recentIngestions: recentLaws, timestamp: new Date().toISOString() };
+    }
+
+    @Post('deputies')
+    async syncDeputies() {
+        this.deputySyncService.syncDeputiesFromNosDeputes();
+        return { success: true, message: 'Synchronisation des députés lancée en arrière-plan' };
     }
 }

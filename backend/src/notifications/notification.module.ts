@@ -12,14 +12,14 @@ import { MailModule } from './mail/mail.module';
         TypeOrmModule.forFeature([VoteRegistry, User]),
         MailModule,
 
-        // PHASE 3 : Queue Bull pour notifications
+        // Queue Bull pour notifications
         BullModule.registerQueue({
             name: 'notifications',
         }),
     ],
     providers: [
         NotificationService,
-        NotificationProcessor, // Processor pour traiter la queue
+        NotificationProcessor,
     ],
     exports: [NotificationService, MailModule],
 })

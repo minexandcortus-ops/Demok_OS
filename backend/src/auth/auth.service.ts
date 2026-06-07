@@ -195,12 +195,26 @@ export class AuthService {
      * Login existing user
      */
     async loginUser(dto: LoginDto) {
-        const trimmedPseudo = dto.pseudo.trim();
-        // Find citizen by pseudo
-        const citizen = await this.citizenRepository.findOne({
-            where: { pseudo: trimmedPseudo },
-            relations: ['user'],
-        });
+        const trimmedInput = dto.pseudo.trim();
+        let citizen = null;
+
+        if (trimmedInput.includes('@')) {
+            // Login with email
+            const emailHash = this.hashEmail(trimmedInput);
+            const user = await this.userRepository.findOne({ where: { emailHash } });
+            if (user) {
+                citizen = await this.citizenRepository.findOne({ 
+                    where: { user: { id: user.id } }, 
+                    relations: ['user'] 
+                });
+            }
+        } else {
+            // Login with pseudo
+            citizen = await this.citizenRepository.findOne({
+                where: { pseudo: trimmedInput },
+                relations: ['user'],
+            });
+        }
 
         if (!citizen) {
             throw new UnauthorizedException('Pseudo ou mot de passe incorrect');

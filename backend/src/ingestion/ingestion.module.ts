@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { IngestionANService } from './ingestion-an.service';
+import { DeputySyncService } from './deputy-sync.service';
 import { IngestionHtmlAgendaService } from './ingestion-html-agenda.service';
 import { NormalizerService } from './normalizer.service';
 import { DiffDetectorService } from './diff-detector.service';
@@ -42,6 +43,7 @@ import { NotificationModule } from '../notifications/notification.module';
         CompteRenduScrapingService,
         LawScraperService,
         DynScraperService,
+        DeputySyncService,
     ],
     exports: [
         IngestionANService,
@@ -53,6 +55,7 @@ import { NotificationModule } from '../notifications/notification.module';
         CompteRenduScrapingService,
         LawScraperService,
         DynScraperService,
+        DeputySyncService,
     ],
 })
 export class IngestionModule { }
