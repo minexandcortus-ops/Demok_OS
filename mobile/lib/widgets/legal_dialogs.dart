@@ -15,13 +15,13 @@ class LegalDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Démok - Version 1.1 - Mars 2026\n\n',
+                  'Démok - Version 1.1 - Juin 2026\n\n',
                   style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                 ),
                 _buildSection('1. Objet et Indépendance', 
                   'Démok est une plateforme citoyenne d\'information et de débat. Elle est développée par une initiative indépendante et n\'est aucunement affiliée, approuvée ou liée au Gouvernement français, à l\'Assemblée nationale ou à toute institution publique.'),
                 _buildSection('2. Sources et Données', 
-                  'Les données législatives (lois, amendements) proviennent de l\'Open Data de l\'Assemblée nationale. Bien que nous fassions de notre mieux pour assurer la fiabilité des résumés générés par IA, ceux-ci ont une valeur purement informative et ne remplacent pas les textes officiels consultables sur legifrance.gouv.fr.'),
+                  'Les données législatives relatives aux textes de lois et amendements proviennent de l\'Open Data de l\'Assemblée nationale. Les données spécifiques aux députés (votes, statistiques parlementaires) ainsi que les résumés générés par IA sont fournis par le service tiers Clair (clair.vote). Bien que nous fassions de notre mieux pour assurer la fiabilité de ces informations, elles ont une valeur purement informative et ne remplacent pas les textes officiels consultables sur legifrance.gouv.fr.'),
                 _buildSection('3. Nature des Votes et Sondages', 
                   'Les votes exprimés sur Démok sont CONSULTATIFS et n\'ont aucune valeur légale, électorale ou contraignante. Ils servent à mesurer l\'opinion citoyenne au sein de la communauté Démok.'),
                 _buildSection('4. Règles de Participation et Débats', 
@@ -61,7 +61,7 @@ class LegalDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Démok - Version 1.1 - Mars 2026\n\n',
+                  'Démok - Version 1.1 - Juin 2026\n\n',
                   style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                 ),
                 _buildSection('1. Données Collectées (RGPD)', 

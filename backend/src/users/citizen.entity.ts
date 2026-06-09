@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn, ManyToOne } from 'typeorm';
 import { User } from '../users/user.entity';
-import { Constituency } from './constituency.entity';
 
 /**
  * Profil citoyen attaché à un utilisateur (User).
@@ -25,11 +24,7 @@ export class Citizen {
     postalCode: string;
 
     @Column({ nullable: true })
-    constituencyId: string;
-
-    @ManyToOne(() => Constituency)
-    @JoinColumn({ name: 'constituencyId' })
-    constituency: Constituency;
+    constituencyCode: string;
 
 
     // === Gamification Fields ===

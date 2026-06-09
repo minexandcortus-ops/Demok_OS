@@ -8,7 +8,6 @@ import { Law } from './laws/law.entity';
 import { LawFavorite } from './laws/law-favorite.entity';
 import { User } from './users/user.entity';
 import { Citizen } from './users/citizen.entity';
-import { Constituency } from './users/constituency.entity';
 import { AuthModule } from './auth/auth.module';
 import { VoteRegistry } from './votes/vote-registry.entity';
 import { VoteUrna } from './votes/vote-choice.entity';
@@ -53,7 +52,7 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
             password: process.env.DATABASE_PASSWORD || 'Démok_password',
             database: process.env.DATABASE_NAME || 'Démok_db',
             entities: [
-                Law, LawFavorite, User, Citizen, Constituency, 
+                Law, LawFavorite, User, Citizen, 
                 VoteRegistry, VoteUrna, Deputy, OfficialVote, 
                 CitizenLevel, Category, Amendement, Candidate, 
                 PresidentialVote, TopicPoll,

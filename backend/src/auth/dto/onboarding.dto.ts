@@ -2,6 +2,7 @@ export interface OnboardingDto {
     pseudo: string;
     birthYear: number;
     postalCode: string;
+    constituencyCode?: string;
     email: string;
     password: string;
 }

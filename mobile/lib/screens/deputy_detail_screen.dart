@@ -151,18 +151,37 @@ class _DeputyDetailScreenState extends State<DeputyDetailScreen> {
               ),
             const SizedBox(height: 16),
             if (dep.department != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Column(
                 children: [
-                  const Icon(Icons.location_on, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      dep.department!,
-                      style: const TextStyle(fontSize: 16, color: Colors.black87),
-                      textAlign: TextAlign.center,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          dep.department!,
+                          style: const TextStyle(fontSize: 16, color: Colors.black87),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
+                  if (!_isLoading && _stats != null && _stats!['mandateStartDate'] != null)
+                    Builder(builder: (context) {
+                      try {
+                        final date = DateTime.parse(_stats!['mandateStartDate']);
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            "Depuis le ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}",
+                            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                          ),
+                        );
+                      } catch (_) {
+                        return const SizedBox.shrink();
+                      }
+                    }),
                 ],
               ),
             const SizedBox(height: 16),
@@ -172,20 +191,24 @@ class _DeputyDetailScreenState extends State<DeputyDetailScreen> {
                 runSpacing: 8,
                 alignment: WrapAlignment.center,
                 children: [
-                  if (_stats!['presenceWeeks'] != null && _stats!['presenceWeeks'] > 0)
-                    ActionChip(
-                      avatar: const Icon(Icons.info_outline, size: 16, color: Colors.white),
-                      label: Text('${_stats!['presenceWeeks']} sem. actif'),
-                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                      backgroundColor: AppColors.primaryBlue,
-                      onPressed: () {
-                        final moy = _stats?['presenceMoyenne'] != null ? "\n\nMoyenne nationale : ${_stats!['presenceMoyenne']} semaines." : "";
-                        _showStatInfo(
-                          "Présence active", 
-                          "Ce chiffre indique le nombre de semaines (sur les 12 derniers mois) où ce député a eu une activité vérifiable à l'Assemblée (prise de parole, vote, amendement...).$moy"
-                        );
-                      },
-                    ),
+                  if (_stats!['presenceScore'] != null)
+                    Builder(builder: (context) {
+                      final presenceScore = _stats!['presenceScore'] as int;
+                      final displayLabel = '$presenceScore% Présence';
+
+                      return ActionChip(
+                        avatar: const Icon(Icons.info_outline, size: 16, color: Colors.white),
+                        label: Text(displayLabel),
+                        labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        backgroundColor: AppColors.primaryBlue,
+                        onPressed: () {
+                          final moy = _stats?['presenceMoyenne'] != null ? "\n\nMoyenne de son groupe : ${_stats!['presenceMoyenne']}%." : "";
+                          final desc = "Taux de participation aux scrutins publics solennels.\n\nCes scrutins correspondent aux votes les plus importants de l'Assemblée (votes finaux sur l'ensemble d'une loi, motions de censure, etc.) où la présence des députés est fortement attendue par leurs groupes politiques.$moy";
+                              
+                          _showStatInfo("Présence solennelle", desc);
+                        },
+                      );
+                    }),
                   if (_stats!['loyaute'] != null)
                     ActionChip(
                       avatar: const Icon(Icons.info_outline, size: 16, color: Colors.white),
@@ -206,9 +229,43 @@ class _DeputyDetailScreenState extends State<DeputyDetailScreen> {
                       labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                       backgroundColor: Colors.teal,
                       onPressed: () {
+                        String datePrecision = "depuis le début de la législature";
+                        if (_stats!['mandateStartDate'] != null) {
+                            try {
+                              final date = DateTime.parse(_stats!['mandateStartDate']);
+                              datePrecision = "depuis sa prise de poste le ${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}";
+                            } catch (_) {}
+                        }
                         _showStatInfo(
                           "Participation aux votes", 
-                          "Le nombre total de scrutins publics auxquels le député a participé (voté pour, contre ou abstention) sur les 12 derniers mois."
+                          "Le nombre total de scrutins publics auxquels le député a participé (voté pour, contre ou abstention) $datePrecision."
+                        );
+                      },
+                    ),
+                  if (_stats!['statsAmendements'] != null && _stats!['statsAmendements'] > 0)
+                    ActionChip(
+                      avatar: const Icon(Icons.info_outline, size: 16, color: Colors.white),
+                      label: Text('${_stats!['statsAmendements']} amendements'),
+                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      backgroundColor: Colors.orange,
+                      onPressed: () {
+                        final adoptes = _stats!['statsAmendementsAdoptes'] ?? 0;
+                        _showStatInfo(
+                          "Amendements proposés", 
+                          "Ce député a déposé ${_stats!['statsAmendements']} amendements depuis le début de la législature.\n\nParmi eux, $adoptes ont été adoptés par l'Assemblée."
+                        );
+                      },
+                    ),
+                  if (_stats!['statsQuestions'] != null && _stats!['statsQuestions'] > 0)
+                    ActionChip(
+                      avatar: const Icon(Icons.info_outline, size: 16, color: Colors.white),
+                      label: Text('${_stats!['statsQuestions']} questions'),
+                      labelStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                      backgroundColor: Colors.indigo,
+                      onPressed: () {
+                        _showStatInfo(
+                          "Questions au Gouvernement", 
+                          "Le nombre de fois où le député a interpellé officiellement un ministre pour l'interroger sur l'action du Gouvernement."
                         );
                       },
                     ),
@@ -224,6 +281,14 @@ class _DeputyDetailScreenState extends State<DeputyDetailScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(dep.bio!, style: const TextStyle(fontSize: 16)),
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Données mises à jour quotidiennement. Résumés actualisés toutes les 2 semaines.",
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                ),
               ),
               const SizedBox(height: 24),
             ],

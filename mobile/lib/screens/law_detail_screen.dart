@@ -12,9 +12,7 @@ import '../widgets/xp_notification.dart';
 import 'dart:collection';
 import '../services/api_client.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:showcaseview/showcaseview.dart';
 import '../widgets/report_error_dialog.dart';
-import '../widgets/showcase_helper.dart';
 
 class LawDetailScreen extends StatelessWidget {
   final Law law;
@@ -23,10 +21,7 @@ class LawDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DemokShowcaseWidget(
-      onFinish: () => UserSession().setLawShowcaseSeen(),
-      builder: (context) => _LawDetailScreenContent(law: law),
-    );
+    return _LawDetailScreenContent(law: law);
   }
 }
 
@@ -76,18 +71,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
     super.initState();
     _checkVoteStatus();
     _loadAmendements();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!UserSession().hasSeenLawShowcase) {
-        Future.delayed(const Duration(milliseconds: 1000), () {
-          if (mounted) {
-            ShowCaseWidget.of(context).startShowCase([
-              if (!UserSession().isGuest && ((widget.law.isVotable && !_hasVoted) || _isModifyingVote)) _voteButtonsKey,
-            ]);
-          }
-        });
-      }
-    });
   }
 
   @override
@@ -545,7 +528,8 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             Center(
               child: InkWell(
                 onTap: () async {
-                  final urlToLaunch = widget.law.latestTextUrl ?? widget.law.officialUrl!;
+                  final urlToLaunch = widget.law.officialUrl;
+                  if (urlToLaunch == null) return;
                   final url = Uri.parse(urlToLaunch);
                   try {
                      // L'utilisation du mode platformDefault permet d'ouvrir le navigateur
@@ -563,7 +547,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: const Text(
-                    'Lire le texte complet',
+                    'Voir le dossier législatif',
                     style: TextStyle(
                       color: AppColors.primaryBlue,
                       decoration: TextDecoration.underline,
@@ -726,10 +710,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   }
 
   Widget _buildVotingButtons() {
-    return DemokShowcase(
-      key: _voteButtonsKey,
-      description: "C'est votre moment démocratique ! Votez pour donner votre avis sur ce texte.",
-      child: Container(
+    return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -750,8 +731,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             _buildLawChoiceButton('AGAINST', 'Contre', AppColors.voteContre, Icons.thumb_down_rounded),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildLawChoiceButton(String choice, String label, Color color, IconData icon) {

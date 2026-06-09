@@ -15,8 +15,6 @@ import 'deputy_list_screen.dart';
 import '../widgets/survey_card.dart';
 import '../widgets/topic_poll_card.dart';
 import '../services/api_client.dart';
-import 'package:showcaseview/showcaseview.dart';
-import '../widgets/showcase_helper.dart';
 import '../services/pwa_install_service.dart';
 import '../widgets/android_install_banner.dart';
 import '../widgets/ios_install_banner.dart';
@@ -30,16 +28,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // _HomeScreenContent expose son _schedulePwaBanner via la clé globale
     final contentKey = GlobalKey<_HomeScreenContentState>();
-    return DemokShowcaseWidget(
-      onFinish: () => UserSession().setHomeShowcaseSeen(),
-      onShowcaseFinished: () {
-        // Déclenche la bannière PWA 3s après la fin/skip du showcase
-        contentKey.currentState?._schedulePwaBanner();
-        // Déclenche la popup de notifications 1.5s après la fin/skip du showcase
-        contentKey.currentState?._scheduleNotificationPrompt();
-      },
-      builder: (context) => _HomeScreenContent(key: contentKey, initialTab: initialTab),
-    );
+    return _HomeScreenContent(key: contentKey, initialTab: initialTab);
   }
 }
 
@@ -101,11 +90,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
 
 
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!UserSession().hasSeenHomeShowcase && !_isLoading && _laws.isNotEmpty) {
-        _checkAndStartShowcase();
-      }
-    });
   }
 
   void _scheduleNotificationPrompt() {
@@ -157,22 +141,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     );
   }
 
-  void _checkAndStartShowcase() {
-    if (!mounted || UserSession().hasSeenHomeShowcase) return;
-    
-    final keys = [
-      _govKey,
-      _filterKey,
-      _searchKey,
-      if (_laws.isNotEmpty) _lawKey,
-      _profileKey,
-      _surveyTabKey,
-      _deputyTabKey,
-    ];
-    
-    ShowCaseWidget.of(context).startShowCase(keys);
-  }
-
+  
   /// Planifie l'affichage de la bannière PWA après un délai de 3 secondes.
   /// Ne s'affiche que pour les membres connectés (pas les invités),
   /// que si la PWA n'est pas déjà installée, et que si la fenêtre
@@ -186,7 +155,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     if (!pwa.isAndroid && !pwa.isIos) return;
 
     _pwaBannerTimer?.cancel();
-    _pwaBannerTimer = Timer(const Duration(seconds: 3), () {
+    _pwaBannerTimer = Timer(const Duration(seconds: 20), () {
       if (!mounted) return;
       setState(() => _showPwaBanner = true);
     });
@@ -309,7 +278,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         
         if (refresh && !UserSession().hasSeenHomeShowcase) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _checkAndStartShowcase();
           });
         } else if (refresh && UserSession().hasSeenHomeShowcase) {
           // Showcase déjà vu : planifie la bannière et la popup notifications directement
@@ -358,10 +326,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         leading: Row(
           children: [
             const SizedBox(width: 8),
-            DemokShowcase(
-              key: _govKey,
-              description: "Découvrez la composition du gouvernement actuel.",
-              child: IconButton(
+            IconButton(
                 tooltip: 'Composition du gouvernement',
                 icon: const Icon(Icons.account_balance, size: 26, color: Colors.black87),
                 onPressed: () {
@@ -373,11 +338,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                   );
                 },
               ),
-            ),
-            DemokShowcase(
-              key: _filterKey,
-              description: "Filtrez les lois en cours de discussion ou consultez les résultats des votes passés.",
-              child: IconButton(
+            IconButton(
                 tooltip: _showVotedOnly ? 'Afficher toutes les lois' : 'Afficher uniquement les lois passées',
                 icon: Icon(
                   _showVotedOnly ? Icons.fact_check : Icons.fact_check_outlined,
@@ -391,7 +352,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                   _fetchLaws(refresh: true);
                 },
               ),
-            ),
           ],
         ),
         actions: [
@@ -414,10 +374,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
               });
             },
           ),
-          DemokShowcase(
-            key: _profileKey,
-            description: "Accédez à votre profil pour suivre votre progression, vos badges et gérer vos informations.",
-            child: IconButton(
+          IconButton(
               icon: Icon(Icons.person_outline, size: 28, color: UserSession().isGuest ? Colors.grey[400] : Colors.black),
               onPressed: UserSession().isGuest ? () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -430,7 +387,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                 );
               },
             ),
-          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -441,10 +397,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
           if (_selectedTabIndex == 0)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: DemokShowcase(
-              key: _searchKey,
-              description: "Recherchez une loi spécifique par mot-clé.",
-              child: TextField(
+            child: TextField(
                 decoration: InputDecoration(
                   hintText: 'Rechercher une loi...',
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -466,7 +419,6 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                 ),
                 onChanged: _onSearchChanged,
               ),
-            ),
           ),
           Expanded(
             child: _isLoading
@@ -549,11 +501,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                                     );
 
                                     if (index == 0 && _searchQuery.isEmpty) {
-                                      return DemokShowcase(
-                                        key: _lawKey,
-                                        description: "Consultez les dates clés de l'Agenda et les détails de chaque projet de loi.",
-                                        child: card,
-                                      );
+                                      return card;
                                     }
                                     return card;
                                   },
@@ -661,7 +609,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedTabIndex,
         onTap: (index) {
-          if (UserSession().isGuest && (index == 1 || index == 2)) {
+          if (UserSession().isGuest && index == 1) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Inscrivez-vous pour accéder à cette rubrique !')),
             );
@@ -679,21 +627,11 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
             label: 'Lois',
           ),
           BottomNavigationBarItem(
-            icon: DemokShowcase(
-              key: _surveyTabKey,
-              description: "Participez aux sondages sur la présidentielle 2027 et sur les grands sujets de société.",
-              targetShapeBorder: const CircleBorder(),
-              child: Icon(Icons.poll, color: UserSession().isGuest ? Colors.grey[400] : null),
-            ),
+            icon: Icon(Icons.poll, color: UserSession().isGuest ? Colors.grey[400] : null),
             label: 'Sondages',
           ),
           BottomNavigationBarItem(
-            icon: DemokShowcase(
-              key: _deputyTabKey,
-              description: "Découvrez les députés de l'Assemblée nationale.",
-              targetShapeBorder: const CircleBorder(),
-              child: Icon(Icons.people, color: UserSession().isGuest ? Colors.grey[400] : null),
-            ),
+            icon: const Icon(Icons.people),
             label: 'Députés',
           ),
         ],

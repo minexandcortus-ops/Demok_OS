@@ -20,6 +20,7 @@ enum OnboardingStep {
   pseudo,
   birthYear,
   postalCode,
+  deputyChoice,
   email,
   password,
   readyToSubmit,

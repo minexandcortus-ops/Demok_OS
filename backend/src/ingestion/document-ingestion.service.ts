@@ -154,11 +154,17 @@ export class DocumentIngestionService {
 
         const docNum = `l17b${docId[1]}`;
 
-        // Toujours utiliser le suffixe _proposition-loi sans .pdf.
-        // C'est le seul format confirmé sur le site de l'AN pour les textes associés et adoptés.
-        // ex: https://www.assemblee-nationale.fr/dyn/17/textes/l17b2413_proposition-loi
-        // (Cette page HTML affiche toujours le texte définitif, y compris si adopté)
-        const generatedUrl = `${this.DOSSIER_SITE_BASE}/${docNum}_proposition-loi`;
+        // Déterminer le suffixe en fonction du préfixe de la référence
+        let suffix = 'proposition-loi'; // Par défaut (PION)
+        if (latest.ref.startsWith('PRJL')) {
+            suffix = 'projet-loi';
+        } else if (latest.ref.startsWith('PNRE')) {
+            suffix = 'proposition-resolution';
+        } else if (latest.ref.startsWith('TA')) {
+            suffix = 'texte-adopte';
+        }
+
+        const generatedUrl = `${this.DOSSIER_SITE_BASE}/${docNum}_${suffix}`;
 
         // Si l'URL n'a pas changé, on ne sauvegarde pas
         if (law.latestTextUrl === generatedUrl && law.rawText) return false;

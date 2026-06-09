@@ -5,6 +5,7 @@ import '../models/deputy.dart';
 import '../services/deputies_service.dart';
 import '../config/env.dart';
 import 'deputy_detail_screen.dart';
+import '../theme/app_colors.dart';
 
 class DeputyListScreen extends StatefulWidget {
   const DeputyListScreen({super.key});
@@ -168,7 +169,13 @@ class _DeputyListScreenState extends State<DeputyListScreen> {
                         final deputy = _deputies[index];
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: deputy.isMyDeputy ? 3 : 1,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: deputy.isMyDeputy 
+                                ? const BorderSide(color: AppColors.primaryBlue, width: 2) 
+                                : BorderSide.none,
+                          ),
                           child: ListTile(
                             leading: ClipOval(
                               child: Container(
@@ -192,19 +199,37 @@ class _DeputyListScreenState extends State<DeputyListScreen> {
                             title: Text(deputy.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text("${deputy.party ?? 'Sans étiquette'}\n${deputy.department ?? ''}"),
                             isThreeLine: true,
-                            trailing: (deputy.isActive != null && !deputy.isActive!)
+                            trailing: deputy.isMyDeputy
                                 ? Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: Colors.red[100],
+                                      color: AppColors.primaryBlue.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.primaryBlue),
                                     ),
-                                    child: const Text(
-                                      'Fin de mandat',
-                                      style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Text(
+                                          'Mon/Ma député(e)',
+                                          style: TextStyle(color: AppColors.primaryBlue, fontSize: 10, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
                                     ),
                                   )
-                                : null,
+                                : (deputy.isActive != null && !deputy.isActive!)
+                                    ? Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red[100],
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text(
+                                          'Fin de mandat',
+                                          style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      )
+                                    : null,
                             onTap: () {
                                 Navigator.push(
                                   context,

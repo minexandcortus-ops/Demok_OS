@@ -11,6 +11,7 @@ import 'screens/reset_password_screen.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'utils/timeago_fr_custom.dart';
 import 'screens/law_loader_screen.dart';
+import 'widgets/desktop_wrapper.dart';
 
 void main() async {
   // Build buster: 2026-05-16 17:20
@@ -36,6 +37,7 @@ class DemokApp extends StatelessWidget {
       title: 'Démok',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey, // Branché pour la gestion 401
+      builder: (context, child) => DesktopWrapper(child: child!),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,

@@ -55,25 +55,21 @@ class UserSession {
   // Helper to get per-user key
   String _getUserKey(String baseKey) => userId != null ? '${baseKey}_$userId' : baseKey;
 
-  // Obtenir/Définir le statut du tutoriel Accueil
-  bool get hasSeenHomeShowcase => _prefs?.getBool(_getUserKey('hasSeenHomeShowcase')) ?? false;
-  Future<void> setHomeShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenHomeShowcase'), true);
+  // Tutoriels (Showcase) désactivés globalement
+  bool get hasSeenHomeShowcase => true;
+  Future<void> setHomeShowcaseSeen() async {}
 
-  // Obtenir/Définir le statut du tutoriel Profil
-  bool get hasSeenProfileShowcase => _prefs?.getBool(_getUserKey('hasSeenProfileShowcase')) ?? false;
-  Future<void> setProfileShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenProfileShowcase'), true);
+  bool get hasSeenProfileShowcase => true;
+  Future<void> setProfileShowcaseSeen() async {}
 
-  // Obtenir/Définir le statut du tutoriel Loi
-  bool get hasSeenLawShowcase => _prefs?.getBool(_getUserKey('hasSeenLawShowcase')) ?? false;
-  Future<void> setLawShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenLawShowcase'), true);
+  bool get hasSeenLawShowcase => true;
+  Future<void> setLawShowcaseSeen() async {}
 
-  // Obtenir/Définir le statut du tutoriel Sondages
-  bool get hasSeenSurveysShowcase => _prefs?.getBool(_getUserKey('hasSeenSurveysShowcase')) ?? false;
-  Future<void> setSurveysShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenSurveysShowcase'), true);
+  bool get hasSeenSurveysShowcase => true;
+  Future<void> setSurveysShowcaseSeen() async {}
 
-  // Obtenir/Définir le statut du tutoriel Débats
-  bool get hasSeenDebatesShowcase => _prefs?.getBool(_getUserKey('hasSeenDebatesShowcase')) ?? false;
-  Future<void> setDebatesShowcaseSeen() async => await _prefs?.setBool(_getUserKey('hasSeenDebatesShowcase'), true);
+  bool get hasSeenDebatesShowcase => true;
+  Future<void> setDebatesShowcaseSeen() async {}
 
   // ---- Bannière d'installation PWA ----
 

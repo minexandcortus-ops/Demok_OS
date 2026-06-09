@@ -20,6 +20,11 @@ export class DeputiesController {
         return this.deputiesService.searchDeputies(query, sort, parsedLimit, parsedOffset, userId);
     }
 
+    @Get('department/:deptCode')
+    async getDeputiesByDepartment(@Param('deptCode') deptCode: string) {
+        return this.deputiesService.getDeputiesByDepartment(deptCode);
+    }
+
     @Get('photo/:idAn')
     async getDeputyPhoto(@Param('idAn') idAn: string, @Res() res: Response) {
         try {

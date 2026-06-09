@@ -101,17 +101,24 @@ export class DeputySyncService {
                     
                     const fallbackBio = `${prenom} ${nom} est un${sexeS} député${sexeS} pour ${partiClean}. ${elS} a été élu${sexeS} dans la ${numCirco}ème circonscription du département (${numDeptmt}).`;
                     
-                    const rawBio = item.resumeIA || item.parcoursIA || fallbackBio;
+                    const clairData = [
+                        item.resumeIA,
+                        item.parcoursIA,
+                        item.positionsClesIA,
+                        item.faitsNotablesIA
+                    ].filter(Boolean).join('\n\n');
+                    
+                    const rawBio = clairData || fallbackBio;
 
-                    // Si on a Mistral configuré et qu'on veut rafraîchir ou raccourcir la bio (optionnel)
-                    if (process.env.MISTRAL_API_KEY && (!deputy.bio || deputy.bio.length > 250)) {
+                    // Si on a Mistral configuré, on génère une belle biographie en 2 parties
+                    if (process.env.MISTRAL_API_KEY) {
                         try {
                             const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
                             const chatResponse = await mistral.chat.complete({
                                 model: 'mistral-small-latest',
                                 messages: [{
                                     role: 'user', 
-                                    content: `Résume la biographie suivante en une ou deux phrases courtes et accrocheuses (maximum 200 caractères), adaptées pour une application mobile citoyenne. Ne mets pas de gras ni d'introduction, donne juste le texte:\n\n${rawBio}` 
+                                    content: `À partir des informations suivantes sur un député, rédige une biographie claire et engageante pour une application citoyenne.\nStructure ta réponse en exactement DEUX sections avec les titres exacts suivants en majuscules (n'utilise pas de Markdown ni de gras, juste les majuscules et des sauts de ligne) :\n\nRÉSUMÉ ET PARCOURS\n(Rédige ici un paragraphe de 3-4 phrases sur son historique et sa profession)\n\nENGAGEMENTS ET FAITS NOTABLES\n(Rédige ici un paragraphe de 3-4 phrases sur ses combats politiques, prises de position et son influence à l'Assemblée)\n\nVoici les informations brutes :\n${rawBio}` 
                                 }],
                             });
                             const shortBio = chatResponse.choices?.[0]?.message?.content;

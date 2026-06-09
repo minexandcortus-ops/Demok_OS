@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'dart:async';
 import '../models/chat_message.dart';
 import '../widgets/chat_bubble.dart';
 import 'dart:convert';
@@ -30,6 +31,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
   String _postalCode = '';
   String _email = '';
   String _password = '';
+  String? _constituencyCode;
+  List<dynamic> _availableDeputies = [];
 
   @override
   void initState() {
@@ -74,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
     setState(() {
       _messages.add(ChatMessage(text: text, isBot: true));
     });
-    _scrollToBottom();
+    _scrollToBottom(text.length);
   }
 
   void _addUserMessage(String text) {
@@ -85,6 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
   }
 
   void _addLegalMessage() {
+    final text = "C'est tout bon ! En cliquant sur 'C'est parti', tu acceptes nos CGU et Politique de confidentialité.";
     setState(() {
       _messages.add(ChatMessage(
         text: "C'est tout bon ! En cliquant sur 'C'est parti', tu acceptes nos CGU et Politique de confidentialité.",
@@ -124,7 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
         ),
       ));
     });
-    _scrollToBottom();
+    _scrollToBottom(text.length);
   }
 
   void _showCGU() {
@@ -135,14 +139,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
     LegalDialogs.showPrivacyPolicy(context);
   }
 
-  void _scrollToBottom() {
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+  void _scrollToBottom([int textLength = 0]) {
+    final int typingDurationMs = textLength * 30; // 30ms per character (TypewriterText speed)
+    final int totalDurationMs = typingDurationMs > 0 ? typingDurationMs + 500 : 300;
+    
+    int elapsed = 0;
+    Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      if (!_scrollController.hasClients) {
+        timer.cancel();
+        return;
+      }
+      
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
+      
+      elapsed += 100;
+      if (elapsed >= totalDurationMs) {
+        timer.cancel();
       }
     });
   }
@@ -243,10 +259,37 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
         }
 
         _postalCode = sanitizedInput;
-        _currentStep = OnboardingStep.postalCode;
-        _addBotMessage(
-            "Parfait. Dernière étape pour sécuriser ton compte : ton email.");
+        setState(() => _isLoading = true);
+        try {
+          final isDomTom = sanitizedInput.startsWith('97') || sanitizedInput.startsWith('98');
+          final deptCode = isDomTom ? sanitizedInput.substring(0, 3) : sanitizedInput.substring(0, 2);
+          final response = await ApiClient.get('/deputies/department/$deptCode');
+          
+          if (response.statusCode == 200) {
+            final List<dynamic> data = jsonDecode(response.body);
+            if (data.isNotEmpty) {
+               _availableDeputies = data;
+               _currentStep = OnboardingStep.deputyChoice;
+               _addBotMessage("Voici les députés de ton département. Lequel est le tien ? (si tu ne sais pas, tu pourras toujours le mettre à jour dans ton profil plus tard).");
+            } else {
+               _currentStep = OnboardingStep.postalCode;
+               _addBotMessage("Parfait. Dernière étape pour sécuriser ton compte : ton email.");
+            }
+          } else {
+            _currentStep = OnboardingStep.postalCode;
+            _addBotMessage("Parfait. Dernière étape pour sécuriser ton compte : ton email.");
+          }
+        } catch (e) {
+          _currentStep = OnboardingStep.postalCode;
+          _addBotMessage("Parfait. Dernière étape pour sécuriser ton compte : ton email.");
+        } finally {
+          setState(() => _isLoading = false);
+        }
         break;
+
+      case OnboardingStep.deputyChoice:
+        _addBotMessage("Choisis parmi la liste ci-dessous, ou sélectionne 'Je ne sais pas'.");
+        return;
 
       case OnboardingStep.postalCode:
         _email = sanitizedInput.toLowerCase();
@@ -268,11 +311,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
   }
 
   Future<void> _submitOnboarding() async {
+    setState(() => _isLoading = true);
     try {
       final response = await ApiClient.post('/auth/register', body: {
           'pseudo': _pseudo,
           'birthYear': _birthYear,
           'postalCode': _postalCode,
+          if (_constituencyCode != null) 'constituencyCode': _constituencyCode,
           'email': _email,
           'password': _password,
         });
@@ -318,6 +363,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
       }
     } catch (e) {
       _addBotMessage("Erreur de connexion au serveur. Réessaye plus tard.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -390,7 +437,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _submitOnboarding,
+                  onPressed: _isLoading ? null : _submitOnboarding,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF007AFF),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -398,15 +445,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "C'est parti ! 🚀",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "C'est parti ! 🚀",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                ),
+              ),
+            )
+          else if (_currentStep == OnboardingStep.deputyChoice)
+            Container(
+              height: 250,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Colors.grey[300]!)),
+              ),
+              child: ListView(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                           _constituencyCode = null;
+                           _addUserMessage("Je ne sais pas");
+                           setState(() { _currentStep = OnboardingStep.postalCode; });
+                           _addBotMessage("Pas de problème ! On t'en a attribué un par défaut. Dernière étape pour sécuriser ton compte : ton email.");
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF2F2F7),
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text("Je ne sais pas", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                ),
+                  ..._availableDeputies.map((dep) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                         _constituencyCode = dep['constituencyCode'];
+                         _addUserMessage("${dep['fullName']} (${dep['party']})");
+                         setState(() { _currentStep = OnboardingStep.postalCode; });
+                         _addBotMessage("Parfait. Dernière étape pour sécuriser ton compte : ton email.");
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        side: const BorderSide(color: Color(0xFFE5E5EA)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        "${dep['fullName']} - ${dep['department'] ?? '(${dep['constituencyCode'].toString().split('-').first}) - ${dep['constituencyCode'].toString().split('-').last}ème circonscription'}",
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  )).toList(),
+                ],
               ),
             )
           else if (_currentStep != OnboardingStep.complete)

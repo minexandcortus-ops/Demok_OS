@@ -144,9 +144,9 @@ export class VotesService {
         const statistics = await this.getVoteStatistics(law.id);
 
         let deputyVote = null;
-        if (citizen.constituencyId) {
+        if (citizen.constituencyCode) {
             const deputy = await this.deputyRepository.findOne({
-                where: { constituencyCode: citizen.constituencyId },
+                where: { constituencyCode: citizen.constituencyCode },
             });
 
             if (deputy) {
@@ -470,11 +470,11 @@ export class VotesService {
 
         // Check deputy match
         let deputyVote = null;
-        if (citizen.constituencyId) {
+        if (citizen.constituencyCode) {
             const officialVote = await this.officialVoteRepository.findOne({
                 where: {
                     law: { id: lawId },
-                    deputy: { constituencyCode: citizen.constituencyId }
+                    deputy: { constituencyCode: citizen.constituencyCode }
                 },
                 relations: ['deputy']
             });

@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../users/user.entity';
 import { Citizen } from '../users/citizen.entity';
-import { Constituency } from '../users/constituency.entity';
+import { Deputy } from '../votes/deputy.entity';
 import { OnboardingDto } from './dto/onboarding.dto';
 import { LoginDto } from './dto/login.dto';
 import * as crypto from 'crypto';
@@ -22,8 +22,8 @@ export class AuthService {
         private readonly userRepository: Repository<User>,
         @InjectRepository(Citizen)
         private readonly citizenRepository: Repository<Citizen>,
-        @InjectRepository(Constituency)
-        private readonly constituencyRepository: Repository<Constituency>,
+        @InjectRepository(Deputy)
+        private readonly deputyRepository: Repository<Deputy>,
         private readonly gamificationService: GamificationService,
         private readonly mailService: MailService,
         private readonly jwtService: JwtService,
@@ -73,11 +73,18 @@ export class AuthService {
             }
         }
 
-        // For MVP: Simple constituency lookup by postal code prefix (department)
-        const department = dto.postalCode.substring(0, 2);
-        const constituency = await this.constituencyRepository.findOne({
-            where: { department },
-        });
+        let finalConstituencyCode = dto.constituencyCode || null;
+        if (!finalConstituencyCode && dto.postalCode) {
+            const isDomTom = dto.postalCode.startsWith('97') || dto.postalCode.startsWith('98');
+            const deptCode = isDomTom ? dto.postalCode.substring(0, 3) : dto.postalCode.substring(0, 2);
+            const firstDeputy = await this.deputyRepository.createQueryBuilder('deputy')
+                .where('deputy.constituencyCode LIKE :deptCode', { deptCode: `${deptCode}-%` })
+                .andWhere('deputy.isActive = :isActive', { isActive: true })
+                .getOne();
+            if (firstDeputy) {
+                finalConstituencyCode = firstDeputy.constituencyCode;
+            }
+        }
 
         // Create User
         const user = new User();
@@ -100,7 +107,7 @@ export class AuthService {
         citizen.pseudo = trimmedPseudo;
         citizen.birthYear = dto.birthYear;
         citizen.postalCode = dto.postalCode;
-        citizen.constituencyId = constituency?.id || null;
+        citizen.constituencyCode = finalConstituencyCode;
 
         await this.citizenRepository.save(citizen);
 

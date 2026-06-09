@@ -5,8 +5,6 @@ import '../models/candidate.dart';
 import '../services/user_session.dart';
 import '../theme/app_colors.dart';
 import '../services/api_client.dart';
-import 'package:showcaseview/showcaseview.dart';
-import '../widgets/showcase_helper.dart';
 
 class SurveysScreen extends StatefulWidget {
   const SurveysScreen({Key? key}) : super(key: key);
@@ -28,18 +26,6 @@ class _SurveysScreenState extends State<SurveysScreen> {
   void initState() {
     super.initState();
     _loadData().then((_) {
-      if (!UserSession().hasSeenSurveysShowcase) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              ShowCaseWidget.of(context).startShowCase([
-                _presidentialKey,
-                _candidatesKey,
-              ]);
-            }
-          });
-        });
-      }
     });
   }
 
@@ -156,10 +142,8 @@ class _SurveysScreenState extends State<SurveysScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return DemokShowcaseWidget(
-      onFinish: () => UserSession().setSurveysShowcaseSeen(),
-      builder: (context) => Scaffold(
-        backgroundColor: Colors.white,
+    return Scaffold(
+      backgroundColor: Colors.white,
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -178,7 +162,6 @@ class _SurveysScreenState extends State<SurveysScreen> {
             : _error != null
                 ? Center(child: Text(_error!))
                 : _buildContent(),
-      ),
     );
   }
 
@@ -215,10 +198,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
     return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DemokShowcase(
-            key: _presidentialKey,
-            description: "Participez au grand sondage national pour la présidentielle 2027. Votre vote est anonyme et modifiable.",
-            child: Container(
+          Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.primaryBlue.withValues(alpha: 0.1),
@@ -240,17 +220,13 @@ class _SurveysScreenState extends State<SurveysScreen> {
                 ],
               ),
             ),
-          ),
           const SizedBox(height: 20),
           // --- PRÉSIDENTIELLE 2027 (toujours en premier) ---
           const Text('Présidentielle 2027', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           // Horizontal scrollable row of candidates
           // Grid display of candidates
-          DemokShowcase(
-            key: _candidatesKey,
-            description: "Cliquez sur un candidat pour voir son parti et confirmer votre intention de vote.",
-            child: LayoutBuilder(
+          LayoutBuilder(
               builder: (context, constraints) {
                 int crossAxisCount = 2;
                 if (constraints.maxWidth > 1400) {
@@ -277,7 +253,6 @@ class _SurveysScreenState extends State<SurveysScreen> {
                 );
               },
             ),
-          ),
         ],
     );
   }

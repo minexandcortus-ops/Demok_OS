@@ -10,6 +10,7 @@ class Deputy {
   final int? presenceWeeks;
   final int? votesCount;
   final bool? isActive;
+  final bool isMyDeputy;
 
   Deputy({
     required this.id,
@@ -23,6 +24,7 @@ class Deputy {
     this.presenceWeeks,
     this.votesCount,
     this.isActive = true,
+    this.isMyDeputy = false,
   });
 
   factory Deputy.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class Deputy {
       presenceWeeks: json['presenceWeeks'],
       votesCount: json['votesCount'],
       isActive: json['isActive'] ?? true,
+      isMyDeputy: json['isMyDeputy'] ?? false,
     );
   }
 }

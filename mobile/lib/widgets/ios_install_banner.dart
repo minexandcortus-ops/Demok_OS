@@ -113,7 +113,7 @@ class _IosInstallBannerState extends State<IosInstallBanner>
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Accédez à l\'app comme sur votre téléphone',
+                        'Accédez à l\'app directement depuis votre téléphone.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFF64748B),

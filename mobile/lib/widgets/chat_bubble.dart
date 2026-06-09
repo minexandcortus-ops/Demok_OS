@@ -16,39 +16,43 @@ class ChatBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            message.isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: message.isBot
-                  ? Colors.grey[200]
-                  : const Color(0xFF007AFF), // Apple blue
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: message.richContent ??
-                ((message.isBot && shouldAnimate)
-                    ? TypewriterText(
-                        message.text,
-                        style: TextStyle(
-                          color: message.isBot ? Colors.black87 : Colors.white,
-                          fontSize: 16,
-                        ),
-                      )
-                    : Text(
-                        message.text,
-                        style: TextStyle(
-                          color: message.isBot ? Colors.black87 : Colors.white,
-                          fontSize: 16,
-                        ),
-                      )),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Row(
+            mainAxisAlignment:
+                message.isBot ? MainAxisAlignment.start : MainAxisAlignment.end,
+            children: [
+              Container(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * 0.85,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: message.isBot
+                      ? Colors.grey[200]
+                      : const Color(0xFF007AFF), // Apple blue
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: message.richContent ??
+                    ((message.isBot && shouldAnimate)
+                        ? TypewriterText(
+                            message.text,
+                            style: TextStyle(
+                              color: message.isBot ? Colors.black87 : Colors.white,
+                              fontSize: 16,
+                            ),
+                          )
+                        : Text(
+                            message.text,
+                            style: TextStyle(
+                              color: message.isBot ? Colors.black87 : Colors.white,
+                              fontSize: 16,
+                            ),
+                          )),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

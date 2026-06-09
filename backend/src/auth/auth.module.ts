@@ -7,7 +7,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from '../users/user.entity';
 import { Citizen } from '../users/citizen.entity';
-import { Constituency } from '../users/constituency.entity';
+import { Deputy } from '../votes/deputy.entity';
 import { GamificationModule } from '../gamification/gamification.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -18,7 +18,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
  */
 @Module({
     imports: [
-        TypeOrmModule.forFeature([User, Citizen, Constituency]),
+        TypeOrmModule.forFeature([User, Citizen, Deputy]),
         PassportModule.register({ defaultStrategy: 'jwt' }),
         JwtModule.registerAsync({
             imports: [ConfigModule],

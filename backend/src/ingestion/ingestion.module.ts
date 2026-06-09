@@ -15,7 +15,6 @@ import { LawScraperService } from './law-scraper.service';
 import { DynScraperService } from './dyn-scraper.service';
 import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
-import { Constituency } from '../users/constituency.entity';
 import { Category } from '../laws/category.entity';
 import { Candidate } from '../surveys/candidate.entity';
 import { Deputy } from '../votes/deputy.entity';
@@ -27,7 +26,7 @@ import { NotificationModule } from '../notifications/notification.module';
 @Module({
     imports: [
         HttpModule,
-        TypeOrmModule.forFeature([Law, Amendement, Constituency, Category, Candidate, Deputy, OfficialVote]),
+        TypeOrmModule.forFeature([Law, Amendement, Category, Candidate, Deputy, OfficialVote]),
         CategoriesModule,
         NotificationModule,
     ],

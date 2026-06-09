@@ -227,20 +227,28 @@ export class DeputyVoteIngestionService {
         }
 
         try {
-            this.logger.log('🌐 Téléchargement de l\'Open Data (ZIP des scrutins)...');
+            this.logger.log('🌐 Téléchargement des scrutins récents via API CLAIR (Optimisation)...');
             const response = await firstValueFrom(
-                this.httpService.get(this.SCRUTINS_ZIP_URL, {
-                    timeout: 120000,
-                    responseType: 'arraybuffer',
+                this.httpService.get('https://clair-production.up.railway.app/api/v1/scrutins?limit=100', {
+                    timeout: 30000,
                     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Démok/1.0)' },
                 })
             );
 
-            const scrutins = this.parseScrutinsZip(response.data);
+            const scrutins = [];
+            if (response.data && Array.isArray(response.data.data)) {
+                for (const item of response.data.data) {
+                    if (item.sourceData) {
+                        scrutins.push(item.sourceData);
+                    }
+                }
+            }
+
+            this.logger.log(`✅ ${scrutins.length} scrutins récupérés de l'API CLAIR.`);
             this.scrutinsCache = { data: scrutins, timestamp: Date.now() };
             return scrutins;
         } catch (error) {
-            this.logger.error(`❌ Erreur téléchargement scrutins: ${error.message}`);
+            this.logger.error(`❌ Erreur téléchargement scrutins via API CLAIR: ${error.message}`);
             return [];
         }
     }

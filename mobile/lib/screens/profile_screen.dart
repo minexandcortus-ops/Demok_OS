@@ -9,8 +9,6 @@ import '../models/citizen_progress.dart';
 import 'gamification_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_client.dart';
-import 'package:showcaseview/showcaseview.dart';
-import '../widgets/showcase_helper.dart';
 import 'landing_screen.dart';
 import '../widgets/legal_dialogs.dart';
 import '../services/push_notification_service.dart';
@@ -21,10 +19,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DemokShowcaseWidget(
-      onFinish: () => UserSession().setProfileShowcaseSeen(),
-      builder: (context) => _ProfileScreenContent(autoExpandNotifications: autoExpandNotifications),
-    );
+    return _ProfileScreenContent(autoExpandNotifications: autoExpandNotifications);
   }
 }
 
@@ -57,22 +52,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     _fetchProfile();
     _fetchGamificationProgress();
     _checkNotificationStatus();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!UserSession().hasSeenProfileShowcase) {
-        Future.delayed(const Duration(milliseconds: 1000), () {
-          if (mounted && _profileData != null) {
-            ShowCaseWidget.of(context).startShowCase([
-              _xpKey,
-              _rankKey,
-              _emailKey,
-              if (_profileData!['constituency'] != null) _deputyKey,
-              if (_profileData!['constituency']?['deputyEmail'] != null) _deputyEmailKey,
-            ]);
-          }
-        });
-      }
-    });
   }
 
   Future<void> _fetchGamificationProgress() async {
@@ -305,10 +284,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
         child: Column(
           children: [
             // Avatar / Badge
-            DemokShowcase(
-              key: _xpKey,
-              description: "Cumulez des points d'Engagement Citoyen (XP) en votant et en débattant. Touchez le badge pour voir votre progression détaillée.",
-              child: GestureDetector(
+            GestureDetector(
                 onTap: () {
                   Navigator.push(
                     context,
@@ -337,7 +313,6 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                         ),
                       ),
               ),
-            ),
             const SizedBox(height: 16),
             
             // Pseudo
@@ -423,16 +398,11 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
 
             Divider(color: Colors.grey[200]),
             
-            DemokShowcase(
-              key: _emailKey,
-              description: "Vos données sont chiffrées et protégées. Votre email n'est utilisé que pour les notifications importantes.",
-              child: _buildInfoTile(
+            _buildInfoTile(
                 Icons.email, 
                 'Email', 
                 _profileData!['email'] ?? 'Email masqué',
-                onEdit: _showEditEmailDialog,
               ),
-            ),
             
             const SizedBox(height: 32),
 
@@ -529,14 +499,10 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildStatItem('Votes', '${_profileData!['voteCount'] ?? 0}'),
-                  DemokShowcase(
-                    key: _rankKey,
-                    description: "Votre statut évolue avec votre implication. Devenez un acteur majeur de la vie politique, jusqu'au rang suprême !",
-                    child: _buildStatItem(
+                  _buildStatItem(
                       'Statut',
                       _gamificationProgress?.levelName ?? 'Observateur',
                     ),
-                  ),
                 ],
               ),
             ),
@@ -712,37 +678,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
     }
   }
 
-  void _showEditEmailDialog() {
-    final controller = TextEditingController(text: _profileData!['email'] == 'Email masqué' ? '' : _profileData!['email']);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Modifier l\'email'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            hintText: 'votre@email.com',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                _updateProfile({'email': controller.text.trim()});
-              }
-            },
-            child: const Text('Sauvegarder'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showEditConstituencyDialog() {
     final constituencies = _profileData?['availableConstituencies'] as List?;
@@ -855,7 +791,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                       subtitle: Text('Député(e): ${c['deputyName']}'),
                       onTap: () {
                         Navigator.of(context).pop(); // Close dialog immediately
-                        _updateProfile({'constituencyId': c['id']});
+                        _updateProfile({'constituencyCode': c['id']}, popOnSuccess: false);
                       },
                     );
                   },
@@ -900,10 +836,21 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   }
 
   Widget _buildDeputyInfoTile(String deputyName, String? deputyEmail) {
-    return DemokShowcase(
-      key: _deputyKey,
-      description: "Retrouvez ici votre député référent. Vous pouvez le contacter directement par email pour faire entendre votre voix.",
-      child: Padding(
+    String finalEmail = deputyEmail ?? '';
+    if (finalEmail.isEmpty && deputyName.isNotEmpty) {
+      final sanitized = deputyName.toLowerCase()
+         .replaceAll('é', 'e').replaceAll('è', 'e').replaceAll('ê', 'e').replaceAll('ë', 'e')
+         .replaceAll('à', 'a').replaceAll('â', 'a')
+         .replaceAll('î', 'i').replaceAll('ï', 'i')
+         .replaceAll('ô', 'o').replaceAll('ö', 'o')
+         .replaceAll('ù', 'u').replaceAll('û', 'u')
+         .replaceAll('ç', 'c')
+         .replaceAll(RegExp(r'[^a-z0-9\-]'), '.'); 
+      final cleanEmail = sanitized.replaceAll(RegExp(r'\.+'), '.').replaceAll(RegExp(r'^\.|\.$'), '');
+      finalEmail = '$cleanEmail@assemblee-nationale.fr';
+    }
+
+    return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
@@ -930,22 +877,15 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                 ],
               ),
             ),
-            if (deputyEmail != null && deputyEmail.isNotEmpty)
-              DemokShowcase(
-                key: _deputyEmailKey,
-                description: "Interpellez-le directement : un clic ici ouvre votre application mail pour lui écrire.",
-                child: IconButton(
+            if (finalEmail.isNotEmpty)
+              IconButton(
                   icon: const Icon(Icons.email, color: AppColors.primaryBlue),
-                  onPressed: () => _sendEmailToDeputy(deputyEmail),
-                  tooltip: 'Envoyer un email',
+                  onPressed: () => _sendEmailToDeputy(finalEmail),
+                  tooltip: 'Envoyer un email au député',
                 ),
-              )
-            else
-              Icon(Icons.edit, size: 18, color: Colors.grey[400]),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _sendEmailToDeputy(String email) async {

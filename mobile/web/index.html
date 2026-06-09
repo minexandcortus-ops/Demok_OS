@@ -111,6 +111,12 @@
         || window.navigator.standalone === true;
     };
 
+    // Redimensionner automatiquement la fenêtre PWA sur PC/Mac
+    if (window.isRunningAsPwa() && window.getPlatform() === 'other') {
+      // Taille typique d'un écran de smartphone (ex: iPhone 13)
+      window.resizeTo(400, 850);
+    }
+
     // 3. Capture de l'événement beforeinstallprompt (Android/Chrome)
     let _deferredPrompt = null;
 

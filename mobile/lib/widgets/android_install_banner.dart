@@ -61,7 +61,7 @@ class AndroidInstallBanner extends StatelessWidget {
                   ),
                   SizedBox(height: 2),
                   Text(
-                    'Accédez à l\'app directement depuis votre écran d\'accueil.',
+                    'Accédez à l\'app directement depuis votre téléphone.',
                     style: TextStyle(
                       fontSize: 12,
                       color: Color(0xFF64748B),

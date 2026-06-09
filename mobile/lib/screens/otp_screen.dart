@@ -217,6 +217,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       ),
                       decoration: InputDecoration(
                         counterText: '',
+                        contentPadding: EdgeInsets.zero,
                         filled: true,
                         fillColor: const Color(0xFFF0F4FF),
                         border: OutlineInputBorder(

@@ -37,10 +37,9 @@ export class DeputiesService {
         if (userId) {
             const citizen = await this.citizenRepository.findOne({
                 where: { user: { id: userId } },
-                relations: ['constituency'],
             });
-            if (citizen && citizen.constituency) {
-                userConstituencyCode = citizen.constituency.code;
+            if (citizen && citizen.constituencyCode) {
+                userConstituencyCode = citizen.constituencyCode;
             }
         }
 
@@ -70,7 +69,12 @@ export class DeputiesService {
 
         const [deputies, total] = await qb.getManyAndCount();
 
-        return { deputies, total };
+        const mappedDeputies = deputies.map(d => ({
+            ...d,
+            isMyDeputy: userConstituencyCode ? d.constituencyCode === userConstituencyCode : false
+        }));
+
+        return { deputies: mappedDeputies, total };
     }
 
     async getDeputyById(id: string) {
@@ -143,11 +147,22 @@ export class DeputiesService {
             if (response.ok) {
                 const json = await response.json();
                 if (json.data) {
+                    let mandateStartDate = null;
+                    if (json.data.mandats && Array.isArray(json.data.mandats)) {
+                        const assembleeMandat = json.data.mandats.find((m: any) => m.typeOrgane === 'ASSEMBLEE');
+                        if (assembleeMandat && assembleeMandat.dateDebut) {
+                            mandateStartDate = assembleeMandat.dateDebut;
+                        }
+                    }
                     return {
                         loyaute: json.data.statsLoyaute,
-                        presenceMoyenne: json.data.statsPresenceMoyenne,
-                        presenceWeeks: json.data.statsPresence,
+                        presenceMoyenne: json.data.groupe?.statsPresenceSolennelMoyenne,
+                        presenceScore: json.data.statsPresenceSolennel,
                         votesCount: json.data.statsParticipation,
+                        mandateStartDate: mandateStartDate,
+                        statsAmendements: json.data.statsAmendements,
+                        statsAmendementsAdoptes: json.data.statsAmendementsAdoptes,
+                        statsQuestions: json.data.statsQuestions,
                     };
                 }
             }
@@ -155,5 +170,13 @@ export class DeputiesService {
             console.error("Erreur lors de la récupération des stats CLAIR:", e);
         }
         return null;
+    }
+
+    async getDeputiesByDepartment(deptCode: string) {
+        return this.deputyRepository.createQueryBuilder('deputy')
+            .where('deputy.constituencyCode LIKE :code', { code: `${deptCode}-%` })
+            .andWhere('deputy.isActive = :isActive', { isActive: true })
+            .orderBy("CAST(split_part(deputy.constituencyCode, '-', 2) AS INTEGER)", 'ASC')
+            .getMany();
     }
 }
