@@ -160,7 +160,7 @@ export class DeputyVoteIngestionService {
                     if (match) {
                         this.logger.log(`⚡ [DynScraper] Scrutin récent ${match.id} trouvé dans la liste pour "${law.titleOfficial.substring(0, 50)}..."`);
                         (match.details as any).scrutinId = match.id;
-                        await this.applyDynScrapedResult(law, match.details);
+                        await this.applyDynScrapedResult(law, match.details, match.title);
                         
                         this.amendementIngestionService.ingestAmendements(law).catch(e =>
                             this.logger.warn(`⚠️ Re-sync amendements après vote dynamique : ${e.message}`)
@@ -377,7 +377,20 @@ export class DeputyVoteIngestionService {
             if (titre.includes('amendement') && !titre.includes('ensemble')) return -100;
             
             // Prioriser les votes sur l'ENSEMBLE
-            if (titre.includes('motion de rejet') || titre.includes('motion de renvoi')) return -50;
+            if (titre.includes('motion de rejet')) {
+                const synthese = s.syntheseVote || s.synthese || s;
+                const decompte = synthese.decompte || s.decompte || {};
+                const pour = parseInt(decompte.pour || synthese.nombrePour || synthese.pour || '0', 10);
+                const contre = parseInt(decompte.contre || synthese.nombreContre || synthese.contre || '0', 10);
+                const adopted = (synthese.resultat === 'adopté' || s.annonce === "l'Assemblée nationale a adopté" || pour > contre);
+                if (adopted) {
+                    score += 60; // Si adoptée, la loi est rejetée, c'est le vote final !
+                } else {
+                    return -50; // Si rejetée, la discussion continue, on ignore ce scrutin
+                }
+            } else if (titre.includes('motion de renvoi')) {
+                return -50;
+            }
             if (titre.includes('ensemble')) score += 60;
             if (titre.includes('article unique')) score += 55;
             if (titre.includes('solennel')) score += 40;
@@ -415,21 +428,32 @@ export class DeputyVoteIngestionService {
         const synthese = scrutin.syntheseVote || scrutin.synthese || scrutin;
         const decompte = synthese.decompte || scrutin.decompte || {};
 
-        const pour = parseInt(decompte.pour || synthese.nombrePour || synthese.pour || '0', 10);
-        const contre = parseInt(decompte.contre || synthese.nombreContre || synthese.contre || '0', 10);
+        let pour = parseInt(decompte.pour || synthese.nombrePour || synthese.pour || '0', 10);
+        let contre = parseInt(decompte.contre || synthese.nombreContre || synthese.contre || '0', 10);
         const abstention = parseInt(decompte.abstentions || synthese.nombreAbstentions || synthese.abstentions || '0', 10);
         const nonVotants = parseInt(decompte.nonVotants || synthese.nombreNonVotants || synthese.nonVotants || '0', 10);
         const total = pour + contre + abstention;
-        const adopted = (synthese.resultat === 'adopté' || scrutin.annonce === "l'Assemblée nationale a adopté" || pour > contre);
+        
+        const titre = (scrutin.titre || scrutin.libelle || '').toLowerCase();
+        const isMotionDeRejet = titre.includes('motion de rejet');
+        
+        let adopted = (synthese.resultat === 'adopté' || scrutin.annonce === "l'Assemblée nationale a adopté" || pour > contre);
 
-        law.deputyVoteResult = { pour, contre, abstention, nonVotants, total, adopted, scrutinId, dateScrutin };
+        if (isMotionDeRejet) {
+            const tmp = pour;
+            pour = contre;
+            contre = tmp;
+            adopted = false;
+        }
+
+        law.deputyVoteResult = { pour, contre, abstention, nonVotants, total, adopted, scrutinId, dateScrutin, isMotionDeRejet };
         law.status = this.determineNewStatus(law, scrutin, adopted);
         law.isOnAgenda = false;
         law.voteDate = new Date(dateScrutin);
 
         await this.lawRepository.save(law);
-        await this.storeIndividualVotes(law, scrutin, scrutinId, dateScrutin);
-        await this.notificationService.notifyLawModified(law.id);
+        await this.storeIndividualVotes(law, scrutin, scrutinId, dateScrutin, isMotionDeRejet);
+        await this.notificationService.queueMorningDigest(law.id);
     }
 
     private determineNewStatus(law: Law, scrutin: any, adopted: boolean): LawStatus {
@@ -443,15 +467,19 @@ export class DeputyVoteIngestionService {
         return adopted ? LawStatus.VOTED_AN : LawStatus.REJECTED;
     }
 
-    private async storeIndividualVotes(law: Law, scrutin: any, scrutinId: string, dateScrutin: string): Promise<void> {
+    private async storeIndividualVotes(law: Law, scrutin: any, scrutinId: string, dateScrutin: string, isMotionDeRejet: boolean = false): Promise<void> {
         const groupes = scrutin.groupes?.groupe;
         if (!groupes) return;
         const groupesList = Array.isArray(groupes) ? groupes : [groupes];
 
         for (const groupe of groupesList) {
             const groupeLibelle = groupe.organeRef || groupe.libelle || 'Inconnu';
-            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.pour?.votant, VoteChoice.FOR, groupeLibelle, scrutinId, dateScrutin);
-            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.contre?.votant, VoteChoice.AGAINST, groupeLibelle, scrutinId, dateScrutin);
+            
+            const forChoice = isMotionDeRejet ? VoteChoice.AGAINST : VoteChoice.FOR;
+            const againstChoice = isMotionDeRejet ? VoteChoice.FOR : VoteChoice.AGAINST;
+
+            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.pour?.votant, forChoice, groupeLibelle, scrutinId, dateScrutin);
+            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.contre?.votant, againstChoice, groupeLibelle, scrutinId, dateScrutin);
             await this.processVoteGroup(law, groupe.vote?.decompteVoix?.abstentions?.votant, VoteChoice.ABSTAIN, groupeLibelle, scrutinId, dateScrutin);
         }
     }
@@ -542,26 +570,39 @@ export class DeputyVoteIngestionService {
         this.logger.log(`✅ Résultats scrapés appliqués pour ${law.externalId} (type: ${law.deputyVoteResult.voteType})`);
         
         if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.REJECTED) {
-            await this.notificationService.notifyLawModified(law.id);
+            await this.notificationService.queueMorningDigest(law.id);
         }
     }
 
-    private async applyDynScrapedResult(law: Law, details: any): Promise<void> {
+    private async applyDynScrapedResult(law: Law, details: any, title?: string): Promise<void> {
         const scrutinId = details.scrutinId || 'scraped_' + Date.now();
+        const isMotionDeRejet = title ? title.toLowerCase().includes('motion de rejet') : false;
+        
+        let pour = details.pour;
+        let contre = details.contre;
+        let adopted = details.adopted;
+        
+        if (isMotionDeRejet) {
+            const tmp = pour;
+            pour = contre;
+            contre = tmp;
+            adopted = false;
+        }
         
         law.deputyVoteResult = {
-            pour: details.pour,
-            contre: details.contre,
+            pour,
+            contre,
             abstention: details.abstention,
             nonVotants: 0,
             total: details.total,
-            adopted: details.adopted,
+            adopted,
             scrutinId: scrutinId,
             dateScrutin: details.dateScrutin,
             voteType: 'scrutin_public',
+            isMotionDeRejet
         };
         
-        law.status = this.determineNewStatus(law, { uid: scrutinId, dateScrutin: details.dateScrutin }, details.adopted);
+        law.status = this.determineNewStatus(law, { uid: scrutinId, dateScrutin: details.dateScrutin }, adopted);
         law.isOnAgenda = false;
         law.voteDate = new Date(details.dateScrutin);
         
@@ -572,7 +613,11 @@ export class DeputyVoteIngestionService {
             const groupName = groupEntry.groupName;
             for (const voteEntry of groupEntry.votes) {
                 const actorRef = voteEntry.deputyAnRef;
-                const choice = voteEntry.choice;
+                let choice = voteEntry.choice;
+                if (isMotionDeRejet) {
+                    if (choice === VoteChoice.FOR) choice = VoteChoice.AGAINST;
+                    else if (choice === VoteChoice.AGAINST) choice = VoteChoice.FOR;
+                }
                 const fullName = voteEntry.deputyName;
                 
                 try {
@@ -609,7 +654,7 @@ export class DeputyVoteIngestionService {
         
         this.logger.log(`✅ Résultats scrapés DYN appliqués pour ${law.externalId} (Scrutin: ${scrutinId})`);
         if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.REJECTED) {
-            await this.notificationService.notifyLawModified(law.id);
+            await this.notificationService.queueMorningDigest(law.id);
         }
     }
 

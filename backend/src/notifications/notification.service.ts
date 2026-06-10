@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 import { VoteRegistry } from '../votes/vote-registry.entity';
 import { User } from '../users/user.entity';
+import { Law } from '../laws/law.entity';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -20,6 +21,9 @@ export class NotificationService {
 
         @InjectRepository(User)
         private userRepository: Repository<User>,
+
+        @InjectRepository(Law)
+        private lawRepository: Repository<Law>,
 
         @InjectQueue('notifications')
         private notificationQueue: Queue,
@@ -140,19 +144,126 @@ export class NotificationService {
     }
 
     /**
-     * Notifie tous les utilisateurs ayant voté sur une loi dont le résultat est maintenant connu.
-     * Utilise un seul job multicast au lieu d'un job par utilisateur (évite N+1 sur la queue).
+     * Ajoute une loi à la file d'attente nocturne (Redis Set) pour être traitée à 8h00.
      */
-    async notifyLawModified(lawId: string): Promise<void> {
-        this.logger.log(`📢 Notification loi votée : ID ${lawId}`);
+    async queueMorningDigest(lawId: string): Promise<void> {
+        this.logger.log(`📥 Loi ${lawId} ajoutée à la file d'attente matinale.`);
+        const redis = this.notificationQueue.client;
+        await redis.sadd('morning_digest_laws', lawId);
+    }
 
-        // Récupérer les tokens FCM directement depuis la jointure
+    /**
+     * Fonction exécutée à 8h00 par le Cron.
+     * Regroupe les notifications de la nuit et les envoie par lots.
+     */
+    async processMorningDigest(): Promise<void> {
+        this.logger.log('🌅 Début du traitement du Morning Digest (Batching des notifications)');
+        const redis = this.notificationQueue.client;
+        
+        const lawIds = await redis.smembers('morning_digest_laws');
+        if (!lawIds || lawIds.length === 0) {
+            this.logger.log('✅ Aucune loi à notifier ce matin.');
+            return;
+        }
+
+        // On vide la liste immédiatement pour éviter de relancer en cas de double exécution
+        await redis.del('morning_digest_laws');
+
+        const laws = await this.lawRepository.findByIds(lawIds);
+        if (laws.length === 0) return;
+
+        // Récupérer les votes de tous les utilisateurs pour ces lois
         const votes = await this.voteRegistryRepository
             .createQueryBuilder('vote')
             .leftJoinAndSelect('vote.citizen', 'citizen')
             .leftJoinAndSelect('citizen.user', 'user')
             .leftJoinAndSelect('vote.law', 'law')
-            .where('law.id = :lawId', { lawId })
+            .where('law.id IN (:...lawIds)', { lawIds })
+            .andWhere('user.notifyLawResults = :val', { val: true })
+            .andWhere('user.fcmToken IS NOT NULL')
+            .getMany();
+
+        // Grouper les lois votées par token utilisateur
+        const userMap = new Map<string, Law[]>();
+        for (const vote of votes) {
+            const token = vote.citizen?.user?.fcmToken;
+            if (!token) continue;
+            if (!userMap.has(token)) userMap.set(token, []);
+            userMap.get(token)!.push(vote.law);
+        }
+
+        // Grouper les tokens par payload pour utiliser le Multicast (très performant)
+        const multicastGroups = new Map<string, { title: string, body: string, data: any, tokens: string[] }>();
+
+        for (const [token, votedLaws] of userMap.entries()) {
+            const count = votedLaws.length;
+            let hash = '';
+            let title = '';
+            let body = '';
+            let notifData: any = {};
+
+            if (count === 1) {
+                const law = votedLaws[0];
+                hash = `law_${law.id}`;
+                const stats = law.deputyVoteResult;
+                const adopted = stats?.adopted ?? false;
+                
+                title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
+                body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}".`;
+                
+                if (stats && (stats.pour > 0 || stats.contre > 0)) {
+                    const total = stats.pour + stats.contre;
+                    const pourPercent = Math.round((stats.pour / total) * 100);
+                    const contrePercent = Math.round((stats.contre / total) * 100);
+                    body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
+                }
+                notifData = { type: 'LAW_VOTED', lawId: law.id };
+            } else {
+                hash = `group_${count}`;
+                title = '🏛️ Nouveaux résultats !';
+                body = `Les résultats officiels de ${count} lois sur lesquelles vous avez voté sont disponibles.`;
+                notifData = { type: 'LAW_GROUP' }; // Ouvre simplement l'onglet "Lois"
+            }
+
+            if (!multicastGroups.has(hash)) {
+                multicastGroups.set(hash, { title, body, data: notifData, tokens: [] });
+            }
+            multicastGroups.get(hash)!.tokens.push(token);
+        }
+
+        // Pousser les jobs de notification dans la queue (par paquets de 500)
+        let totalSent = 0;
+        for (const group of multicastGroups.values()) {
+            const chunkSize = 500;
+            for (let i = 0; i < group.tokens.length; i += chunkSize) {
+                const chunkTokens = group.tokens.slice(i, i + chunkSize);
+                await this.notificationQueue.add('multicast-push', {
+                    tokens: chunkTokens,
+                    title: group.title,
+                    body: group.body,
+                    data: group.data
+                });
+                totalSent += chunkTokens.length;
+            }
+        }
+
+        this.logger.log(`✅ Morning Digest terminé : ${totalSent} notifications programmées.`);
+    }
+
+    /**
+     * Envoi immédiat ciblé (utilisé par le bouton Admin)
+     */
+    async sendTargetedLawNotification(lawId: string): Promise<void> {
+        this.logger.log(`📢 Notification manuelle ciblée : ID ${lawId}`);
+
+        const law = await this.lawRepository.findOne({ where: { id: lawId } });
+        if (!law) return;
+
+        const votes = await this.voteRegistryRepository
+            .createQueryBuilder('vote')
+            .leftJoinAndSelect('vote.citizen', 'citizen')
+            .leftJoinAndSelect('citizen.user', 'user')
+            .where('vote.lawId = :lawId', { lawId })
             .andWhere('user.notifyLawResults = :val', { val: true })
             .andWhere('user.fcmToken IS NOT NULL')
             .getMany();
@@ -161,40 +272,37 @@ export class NotificationService {
             .map(v => v.citizen?.user?.fcmToken)
             .filter((t): t is string => !!t);
 
-        const lawTitle = votes[0]?.law?.titleOfficial || 'une loi';
-
-        this.logger.log(`👥 ${tokens.length} token(s) à notifier pour la loi "${lawTitle.substring(0, 50)}"`);
-
-        if (tokens.length === 0) return;
-
-        // Un seul job multicast au lieu de N jobs individuels
-        await this.notificationQueue.add('law-modified', {
-            tokens,
-            lawId,
-            lawTitle,
-            message: `La loi "${lawTitle}" sur laquelle vous avez voté vient d'être votée à l'Assemblée Nationale.`,
-            type: 'LAW_MODIFIED',
-        });
-
-        this.logger.log(`✅ Job multicast "law-modified" ajouté à la queue (${tokens.length} destinataires)`);
-    }
-
-    /**
-     * Notifie tous les utilisateurs (avec l'option activée) du résultat du vote d'une loi.
-     */
-    async notifyLawVoted(lawId: string, lawTitle: string, resultStats: any, adopted: boolean): Promise<void> {
-        this.logger.log(`📢 Notification résultat loi : ID ${lawId}`);
-        try {
-            await this.notificationQueue.add('law-voted', {
-                lawId,
-                lawTitle,
-                resultStats,
-                adopted,
-            });
-            this.logger.log(`✅ Job "law-voted" ajouté à la queue pour la loi ${lawId}`);
-        } catch (error) {
-            this.logger.error(`❌ Erreur ajout notification "law-voted" : ${error.message}`);
+        if (tokens.length === 0) {
+            this.logger.log(`✅ Aucun utilisateur à notifier pour la loi ${lawId}`);
+            return;
         }
+
+        const stats = law.deputyVoteResult;
+        const adopted = stats?.adopted ?? false;
+        
+        const title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
+        let body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}".`;
+        
+        if (stats && (stats.pour > 0 || stats.contre > 0)) {
+            const total = stats.pour + stats.contre;
+            const pourPercent = Math.round((stats.pour / total) * 100);
+            const contrePercent = Math.round((stats.contre / total) * 100);
+            body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
+        }
+
+        // Chunk by 500 and queue
+        const chunkSize = 500;
+        for (let i = 0; i < tokens.length; i += chunkSize) {
+            const chunkTokens = tokens.slice(i, i + chunkSize);
+            await this.notificationQueue.add('multicast-push', {
+                tokens: chunkTokens,
+                title,
+                body,
+                data: { type: 'LAW_VOTED', lawId: law.id }
+            });
+        }
+
+        this.logger.log(`✅ Job multicast immédiat ajouté à la queue (${tokens.length} destinataires ciblés)`);
     }
 
     /**

@@ -38,6 +38,12 @@ class ApiClient {
     debugPrint('[ApiClient] Token expiré — session réinitialisée, redirection vers l\'accueil.');
   }
 
+  static bool _shouldHandle401(String path) {
+    return !path.contains('/auth/login') && 
+           !path.contains('/auth/register') && 
+           !path.contains('/auth/forgot-password');
+  }
+
   static Future<http.Response> get(String path, {Map<String, String>? headers}) async {
     // Add cache buster for Web to prevent browser/PWA caching
     final cacheBuster = 't=${DateTime.now().millisecondsSinceEpoch}';
@@ -48,7 +54,7 @@ class ApiClient {
     finalHeaders['Cache-Control'] = 'no-cache, no-store, must-revalidate';
     
     final response = await http.get(uri, headers: finalHeaders);
-    if (response.statusCode == 401) await _handle401();
+    if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 
@@ -59,7 +65,7 @@ class ApiClient {
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
     );
-    if (response.statusCode == 401) await _handle401();
+    if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 
@@ -70,7 +76,7 @@ class ApiClient {
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
     );
-    if (response.statusCode == 401) await _handle401();
+    if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 
@@ -81,14 +87,14 @@ class ApiClient {
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
     );
-    if (response.statusCode == 401) await _handle401();
+    if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 
   static Future<http.Response> delete(String path, {Map<String, String>? headers}) async {
     final uri = Uri.parse('${Env.apiUrl}$path');
     final response = await http.delete(uri, headers: _buildHeaders(headers));
-    if (response.statusCode == 401) await _handle401();
+    if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 }

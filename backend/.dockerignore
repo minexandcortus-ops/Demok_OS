@@ -10,4 +10,5 @@ test-*.ts
 !package-lock.json
 !tsconfig.json
 !nest-cli.json
+!demok-firebase-service-account.json
 src/scripts

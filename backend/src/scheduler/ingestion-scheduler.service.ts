@@ -6,6 +6,8 @@ import { DeputyVoteIngestionService } from '../ingestion/deputy-vote-ingestion.s
 import { AmendementIngestionService } from '../ingestion/amendement-ingestion.service';
 import { DocumentIngestionService } from '../ingestion/document-ingestion.service';
 
+import { NotificationService } from '../notifications/notification.service';
+
 @Injectable()
 export class IngestionSchedulerService {
     private readonly logger = new Logger(IngestionSchedulerService.name);
@@ -16,7 +18,22 @@ export class IngestionSchedulerService {
         private deputyVoteIngestionService: DeputyVoteIngestionService,
         private amendementIngestionService: AmendementIngestionService,
         private documentIngestionService: DocumentIngestionService,
+        private notificationService: NotificationService,
     ) { }
+
+    /**
+     * Cron job : Tous les matins à 8h00 (heure de Paris)
+     * Envoie le résumé des notifications de la nuit (Morning Digest)
+     */
+    @Cron('0 8 * * *', { timeZone: 'Europe/Paris' })
+    async handleMorningDigest() {
+        this.logger.log('⏰ Déclenchement du cron de 8h00 : Morning Digest (Notifications)');
+        try {
+            await this.notificationService.processMorningDigest();
+        } catch (error) {
+            this.logger.error('❌ Erreur lors de l\'envoi du Morning Digest', error.stack);
+        }
+    }
 
     /**
      * Cron job optimisé : Tous les jours à 3h du matin

@@ -20,75 +20,25 @@ export class NotificationProcessor {
     ) {}
 
     /**
-     * Traite les notifications de modification/résultat d'une loi.
-     * Le job reçoit maintenant un tableau de tokens (multicast) au lieu d'un userId unique.
+     * Traite les notifications push de masse (utilisé par le Morning Digest et l'Admin).
+     * Reçoit le payload exact préparé par le NotificationService.
      */
-    @Process('law-modified')
-    async handleLawModified(job: Job) {
-        const { tokens, userId, lawId, lawTitle, message } = job.data;
+    @Process('multicast-push')
+    async handleMulticastPush(job: Job) {
+        const { tokens, title, body, data } = job.data;
+        this.logger.log(`📬 Traitement d'un lot multicast (${tokens?.length || 0} destinataires)`);
 
-        // Support du nouveau format (tokens[]) et de l'ancien format (userId) pour compatibilité
-        if (tokens && Array.isArray(tokens)) {
-            this.logger.log(`📬 Traitement notification multicast loi modifiée (${tokens.length} destinataires)`);
-            await this.notificationService.sendMulticast(
-                tokens,
-                'Résultat de vote',
-                message,
-                { type: 'LAW_MODIFIED', lawId: String(lawId) },
-            );
-        } else if (userId) {
-            // Ancien format : un job = un utilisateur
-            this.logger.log(`📬 Traitement notification individuelle pour user ${userId}`);
-            const user = await this.userRepository.findOne({ where: { id: userId } });
-            if (user?.fcmToken && user.notifyLawResults) {
-                await this.notificationService.sendPushNotification(
-                    user.fcmToken,
-                    'Résultat de vote',
-                    message,
-                    { type: 'LAW_MODIFIED', lawId: String(lawId) },
-                );
-            }
-        }
-
-        this.logger.log(`✅ Job "law-modified" traité (loi: ${lawId})`);
-        return { success: true, lawId, timestamp: new Date().toISOString() };
-    }
-
-    /**
-     * Traite les notifications de résultat de vote d'une loi (envoyé à TOUS les abonnés).
-     */
-    @Process('law-voted')
-    async handleLawVoted(job: Job) {
-        const { lawId, lawTitle, resultStats, adopted } = job.data;
-        this.logger.log(`📬 Traitement résultat loi votée : ${lawTitle}`);
-
-        const users = await this.userRepository.find({
-            where: { notifyLawResults: true },
-        });
-
-        const tokens = users.map(u => u.fcmToken).filter((t): t is string => !!t);
-
-        if (tokens.length > 0) {
-            const title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
-            const pour = resultStats?.pour || 0;
-            const contre = resultStats?.contre || 0;
-            const total = (pour + contre) > 0 ? (pour + contre) : 1;
-            const pourPercent = Math.round((pour / total) * 100);
-            const contrePercent = Math.round((contre / total) * 100);
-
-            const message = `L'Assemblée a voté la loi "${lawTitle}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
-
-            // FIX : type corrigé de 'LAW_MODIFIED' → 'LAW_VOTED'
+        if (tokens && tokens.length > 0) {
             await this.notificationService.sendMulticast(
                 tokens,
                 title,
-                message,
-                { type: 'LAW_VOTED', lawId: String(lawId) },
+                body,
+                data,
             );
         }
 
-        this.logger.log(`✅ Job "law-voted" traité pour la loi ${lawId} (${tokens.length} destinataires)`);
-        return { success: true, lawId, timestamp: new Date().toISOString() };
+        this.logger.log(`✅ Lot multicast traité avec succès.`);
+        return { success: true, count: tokens?.length || 0, timestamp: new Date().toISOString() };
     }
 
     /**

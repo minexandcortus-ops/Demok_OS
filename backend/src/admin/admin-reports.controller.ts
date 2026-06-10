@@ -228,19 +228,11 @@ export class AdminLawsController {
         const law = await this.lawRepository.findOne({ where: { id } });
         if (!law) return { success: false, message: 'Loi introuvable' };
 
-        const stats = law.deputyVoteResult || { pour: 0, contre: 0, abstention: 0, adopted: false };
-        const adopted = stats.adopted;
-
-        await this.notificationService.notifyLawVoted(
-            law.id,
-            law.titleVulgarized || law.titleOfficial,
-            stats,
-            adopted
-        );
+        await this.notificationService.sendTargetedLawNotification(law.id);
 
         return {
             success: true,
-            message: 'Notification envoyée à tous les utilisateurs.',
+            message: 'Notification envoyée aux utilisateurs ayant voté.',
         };
     }
 }
