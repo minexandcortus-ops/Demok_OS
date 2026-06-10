@@ -1,4 +1,4 @@
-﻿# Démok - La Démocratie Collaborative 🗳️
+# Démok - La Démocratie Collaborative 🗳️
 
 **Démok** est une plateforme citoyenne permettant de suivre, de vulgariser et de voter (de manière anonyme et consultative) sur les lois en cours de discussion au Parlement français.
 
@@ -11,7 +11,8 @@ L'objectif est de rendre le processus législatif accessible à tous grâce à l
 - **Flux de lois en temps réel** : Ingestion automatique des données de l'Assemblée Nationale.
 - **Vulgarisation par IA** : Utilisation de Mistral AI pour transformer des textes législatifs complexes en résumés clairs avec des arguments "Pour" et "Contre".
 - **Vote Anonyme** : Système de "Double Registre" garantissant l'anonymat total du choix tout en empêchant le multi-vote.
-- **Sondages et Débats** : Exprimez-vous sur des thématiques clés et participez à des débats d'actualité.
+- **Fiches Députés et Statistiques** : Retrouvez l'historique complet des votes, les présences et les statistiques de chaque député pour suivre son activité à l'Assemblée.
+- **Sondages** : Exprimez-vous sur des thématiques clés de l'actualité politique et sociale.
 - **Gamification** : Gagnez de l'expérience et progressez dans vos niveaux de citoyenneté en participant activement à la vie démocratique.
 
 ---
