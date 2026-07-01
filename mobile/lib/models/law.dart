@@ -89,6 +89,9 @@ class Law {
     // si le vote a lieu aujourd'hui ou dans le futur (même si le backend l'a marquée comme votée).
     // Elle ne passera au statut officiel "Votée" que le lendemain.
     if (baseStatus != LawStatus.upcoming && baseStatus != LawStatus.pending) {
+      // Si on a déjà les résultats du vote de l'AN, on ne force plus le pending
+      if (deputyVoteResult != null) return baseStatus;
+
       final date = voteDate ?? agendaDate;
       if (date != null) {
         final now = DateTime.now();

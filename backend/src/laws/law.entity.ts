@@ -217,6 +217,8 @@ export class Law {
         isMainLevee?: boolean;
         /** Type de procédure de vote */
         voteType?: 'scrutin_public' | 'article_unique' | 'main_levee' | 'tacite';
+        /** Indique si les votes proviennent d'une motion de rejet inversée */
+        isMotionDeRejet?: boolean;
     };
 
     /**

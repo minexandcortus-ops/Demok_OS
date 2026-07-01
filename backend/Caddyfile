@@ -1,4 +1,4 @@
-demok.votre-domaine.com {
+demok.51.159.162.253.nip.io {
     reverse_proxy backend:3000
     log {
         output file /data/access.log
