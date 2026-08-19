@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Candidate } from './candidate.entity';
@@ -28,6 +28,7 @@ export class SurveysService {
         private readonly urnaRepository: Repository<SurveyUrna>,
     ) { }
 
+
     /**
      * Gère l'anonymisation du vote par hachage cryptographique.
      */
@@ -46,8 +47,12 @@ export class SurveysService {
      * Get all presidential candidates ordered alphabetically by name
      */
     async getCandidates(): Promise<Candidate[]> {
-        return this.candidateRepository.find({
-            order: { name: 'ASC' }
+        const candidates = await this.candidateRepository.find();
+        return candidates.sort((a, b) => {
+            const getLastName = (name: string) => name.split(' ').slice(1).join(' ') || name;
+            const lastNameA = getLastName(a.name).toLowerCase();
+            const lastNameB = getLastName(b.name).toLowerCase();
+            return lastNameA.localeCompare(lastNameB, 'fr');
         });
     }
 
@@ -149,6 +154,9 @@ export class SurveysService {
                     name: candidate.name,
                     party: candidate.party,
                     photoUrl: candidate.photoUrl,
+                    description: candidate.description,
+                    programUrl: candidate.programUrl,
+                    partyLogoUrl: candidate.partyLogoUrl,
                     votes: totalCandidateVotes,
                     percentage: totalVotes > 0 ? (totalCandidateVotes / totalVotes) * 100 : 0
                 };

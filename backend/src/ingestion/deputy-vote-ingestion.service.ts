@@ -356,10 +356,14 @@ export class DeputyVoteIngestionService {
         });
 
         if (candidates.length === 0) {
-            // 3. Match par Titre (Similitude)
+            // 3. Match par Titre (Similitude ou Inclusion)
             const candidatesByTitle = scrutins.filter(s => {
                 const scrutinTitle = this.normalizeTitle(s.titre || s.libelle || '');
-                return scrutinTitle.length > 20 && this.similarity(lawTitleNorm, scrutinTitle) > 0.75;
+                return scrutinTitle.length > 20 && (
+                    this.similarity(lawTitleNorm, scrutinTitle) > 0.75 || 
+                    scrutinTitle.includes(lawTitleNorm) ||
+                    lawTitleNorm.includes(scrutinTitle)
+                );
             });
             candidates.push(...candidatesByTitle);
         }

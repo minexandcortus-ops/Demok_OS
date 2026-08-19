@@ -4,6 +4,7 @@ import { AdminIngestionController } from './admin-ingestion.controller';
 import { HealthController } from './health.controller';
 import { AdminReportsController, AdminLawsController } from './admin-reports.controller';
 import { AdminPollsController } from './admin-polls.controller';
+import { AdminCandidatesController } from './admin-candidates.controller';
 import { IngestionModule } from '../ingestion/ingestion.module';
 import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
@@ -14,10 +15,11 @@ import { NotificationModule } from '../notifications/notification.module';
 import { Citizen } from '../users/citizen.entity';
 import { VoteUrna } from '../votes/vote-choice.entity';
 import { TopicPoll } from '../surveys/topic-poll.entity';
+import { Candidate } from '../surveys/candidate.entity';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([Law, Amendement, Report, Citizen, VoteUrna, TopicPoll]),
+        TypeOrmModule.forFeature([Law, Amendement, Report, Citizen, VoteUrna, TopicPoll, Candidate]),
         IngestionModule,
         ReportsModule,
 
@@ -28,8 +30,8 @@ import { TopicPoll } from '../surveys/topic-poll.entity';
         HealthController,
         AdminReportsController,
         AdminLawsController,
-
         AdminPollsController,
+        AdminCandidatesController,
     ],
 })
 export class AdminModule { }

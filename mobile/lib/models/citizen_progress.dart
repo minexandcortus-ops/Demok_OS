@@ -7,6 +7,9 @@ class CitizenProgress {
   final int? nextLevelXP;
   final double progressPercentage;
   final int totalVotes;
+  final int votesPour;
+  final int votesContre;
+  final int votesNeutre;
   final int consecutiveDays;
   final int weeklyStreak;
 
@@ -19,6 +22,9 @@ class CitizenProgress {
     this.nextLevelXP,
     required this.progressPercentage,
     required this.totalVotes,
+    this.votesPour = 0,
+    this.votesContre = 0,
+    this.votesNeutre = 0,
     required this.consecutiveDays,
     required this.weeklyStreak,
   });
@@ -33,6 +39,9 @@ class CitizenProgress {
       nextLevelXP: json['nextLevelXP'] as int?,
       progressPercentage: (json['progressPercentage'] as num).toDouble(),
       totalVotes: json['totalVotes'] as int,
+      votesPour: json['votesPour'] as int? ?? 0,
+      votesContre: json['votesContre'] as int? ?? 0,
+      votesNeutre: json['votesNeutre'] as int? ?? 0,
       consecutiveDays: json['consecutiveDays'] as int,
       weeklyStreak: json['weeklyStreak'] as int,
     );

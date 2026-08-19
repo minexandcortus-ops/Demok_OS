@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'dart:async';
 import 'dart:convert';
 import '../theme/app_colors.dart';
@@ -176,6 +177,8 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
   }
 
   Future<void> _fetchTopicPolls() async {
+    // Disabled temporarily for Presidential 2027 focus
+    /*
     try {
       final response = await ApiClient.get('/surveys/polls');
       if (response.statusCode == 200) {
@@ -187,6 +190,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
     } catch (e) {
       debugPrint('Error fetching topic polls: $e');
     }
+    */
   }
 
 
@@ -316,8 +320,8 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         elevation: 0,
         automaticallyImplyLeading: false,
         toolbarHeight: 100, // Increased height for larger logo
-        title: Image.asset(
-          'assets/images/logo_demok_vf.png',
+        title: SvgPicture.asset(
+          'assets/images/logo_demok_vf.svg',
           height: 80,
           fit: BoxFit.contain,
         ),
@@ -508,27 +512,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                                 ),
                               );
                       } else if (_selectedTabIndex == 1) {
-                        return ListView(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          children: [
-                            SurveyCard(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SurveysScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            ..._topicPolls.map((poll) => TopicPollCard(
-                              slug: poll['slug'] as String,
-                              question: poll['question'] as String,
-                              description: poll['description'] as String? ?? '',
-                            )),
-                          ],
-                        );
+                        return const SurveysScreen();
                       } else {
                         return const DeputyListScreen();
                       }
@@ -627,8 +611,8 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
             label: 'Lois',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.poll, color: UserSession().isGuest ? Colors.grey[400] : null),
-            label: 'Sondages',
+            icon: Icon(Icons.how_to_vote, color: UserSession().isGuest ? Colors.grey[400] : null),
+            label: 'Élection 2027',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.people),

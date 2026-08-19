@@ -126,6 +126,13 @@ export class DocumentIngestionService {
                 if (node.texteAssocie) {
                     textsWithDates.push({ ref: node.texteAssocie, type: 'Proposition initiale', date: node.dateActe || '' });
                 }
+                if (node.codeActe === 'PROM-PUB' && node.dateActe && !law.datePromulgation) {
+                    // Détection opportuniste de promulgation
+                    law.datePromulgation = new Date(node.dateActe);
+                    law.status = LawStatus.VALIDATED;
+                    law.navetteStatus = 'promulguee' as any; // Cast for now
+                    law.isOnAgenda = false;
+                }
                 for (const key of Object.keys(node)) {
                     extractTexts(node[key]);
                 }

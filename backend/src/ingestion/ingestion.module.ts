@@ -22,6 +22,7 @@ import { OfficialVote } from '../votes/official-vote.entity';
 import { CategoriesModule } from '../laws/categories.module';
 
 import { NotificationModule } from '../notifications/notification.module';
+import { PromulgationSyncService } from './promulgation-sync.service';
 
 @Module({
     imports: [
@@ -43,6 +44,7 @@ import { NotificationModule } from '../notifications/notification.module';
         LawScraperService,
         DynScraperService,
         DeputySyncService,
+        PromulgationSyncService,
     ],
     exports: [
         IngestionANService,
@@ -55,6 +57,7 @@ import { NotificationModule } from '../notifications/notification.module';
         LawScraperService,
         DynScraperService,
         DeputySyncService,
+        PromulgationSyncService,
     ],
 })
 export class IngestionModule { }

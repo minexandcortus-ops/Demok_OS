@@ -5,6 +5,7 @@ import { SummaryUpdaterService } from '../ingestion/summary-updater.service';
 import { DeputyVoteIngestionService } from '../ingestion/deputy-vote-ingestion.service';
 import { AmendementIngestionService } from '../ingestion/amendement-ingestion.service';
 import { DocumentIngestionService } from '../ingestion/document-ingestion.service';
+import { PromulgationSyncService } from '../ingestion/promulgation-sync.service';
 
 import { NotificationService } from '../notifications/notification.service';
 
@@ -18,6 +19,7 @@ export class IngestionSchedulerService {
         private deputyVoteIngestionService: DeputyVoteIngestionService,
         private amendementIngestionService: AmendementIngestionService,
         private documentIngestionService: DocumentIngestionService,
+        private promulgationSyncService: PromulgationSyncService,
         private notificationService: NotificationService,
     ) { }
 
@@ -59,24 +61,29 @@ export class IngestionSchedulerService {
             this.logger.log(`✅ Sync terminée : ${syncResult.updated || 0} lois à l'agenda, ${syncResult.imported || 0} importées`);
 
             // Étape 2 : Résolution des votes des députés (lois dont la date est passée)
-            this.logger.log('🗳️ Étape 2/5 : Résolution des votes des députés...');
+            this.logger.log('🗳️ Étape 2/6 : Résolution des votes des députés...');
             const voteResult = await this.deputyVoteIngestionService.syncDeputyVotes();
             this.logger.log(`✅ Votes résolus : ${voteResult.resolved} lois résolues, ${voteResult.skipped} en attente`);
 
+            // Étape 2.5 : Vérification des promulgations et navettes sénatoriales
+            this.logger.log('📜 Étape 3/6 : Vérification des promulgations et navettes...');
+            const promulgationResult = await this.promulgationSyncService.syncPromulgations();
+            this.logger.log(`✅ Promulgations : ${promulgationResult.updated} loi(s) mise(s) à jour`);
+
             // Étape 3 : Génération Mistral OPTIMISÉE (seulement lois sans résumé)
-            this.logger.log('🤖 Étape 3/5 : Génération résumés IA pour nouvelles lois...');
+            this.logger.log('🤖 Étape 4/6 : Génération résumés IA pour nouvelles lois...');
             const mistralResult = await this.summaryUpdaterService.updateRecentSummaries();
             this.logger.log(`✅ Mistral terminé : ${mistralResult.processed} lois traitées, ${mistralResult.skipped} ignorées`);
 
             // Étape 4 : Re-sync des amendements pour toutes les lois à l'agenda
             // (fire-and-forget : ne bloque pas le retour du cron si Mistral est lent)
-            this.logger.log('📋 Étape 4/5 : Re-sync amendements CSV pour les lois à l\'agenda...');
+            this.logger.log('📋 Étape 5/6 : Re-sync amendements CSV pour les lois à l\'agenda...');
             this.amendementIngestionService.ingestAllOnAgendaLaws().catch(e =>
                 this.logger.error('❌ Erreur amendements CRON : ' + e.message)
             );
 
             // Étape 5 : Récupération du dernier texte en date (PDF/HTML)
-            this.logger.log('📄 Étape 5/5 : Mise à jour des liens vers les derniers textes...');
+            this.logger.log('📄 Étape 6/6 : Mise à jour des liens vers les derniers textes...');
             const docsResult = await this.documentIngestionService.updateLatestTexts();
             this.logger.log(`✅ Textes actualisés : ${docsResult.updated} loi(s) mise(s) à jour`);
 

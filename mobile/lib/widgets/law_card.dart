@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/law.dart';
 import '../services/law_service.dart';
+import '../theme/app_colors.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class LawCard extends StatefulWidget {
@@ -94,7 +95,10 @@ class _LawCardState extends State<LawCard> {
                     Color bgCol = Colors.orange[100]!;
                     Color textCol = Colors.orange[800]!;
 
-                    if (law.lawStatus == LawStatus.votedAn || law.lawStatus == LawStatus.validated) {
+                    if (law.isPromulgated || law.lawStatus == LawStatus.validated) {
+                      bgCol = Colors.teal[100]!;
+                      textCol = Colors.teal[900]!;
+                    } else if (law.lawStatus == LawStatus.votedAn) {
                       bgCol = Colors.green[100]!;
                       textCol = Colors.green[800]!;
                     } else if (law.lawStatus == LawStatus.rejected) {
@@ -120,15 +124,36 @@ class _LawCardState extends State<LawCard> {
                   }),
                   const Spacer(),
                   if (law.userVote != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.deepPurple,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.how_to_vote, size: 16, color: Colors.white),
-                    ),
+                    Builder(builder: (context) {
+                      Color bgCol;
+                      Color textCol;
+                      IconData icon;
+
+                      if (law.userVote == 'FOR') {
+                        bgCol = AppColors.votePour.withValues(alpha: 0.15);
+                        textCol = AppColors.votePour;
+                        icon = Icons.thumb_up_rounded;
+                      } else if (law.userVote == 'AGAINST') {
+                        bgCol = AppColors.voteContre.withValues(alpha: 0.15);
+                        textCol = AppColors.voteContre;
+                        icon = Icons.thumb_down_rounded;
+                      } else {
+                        bgCol = AppColors.voteAbstention.withValues(alpha: 0.15);
+                        textCol = AppColors.voteAbstention;
+                        icon = Icons.remove_circle_outline_rounded;
+                      }
+
+                      return Container(
+                        padding: const EdgeInsets.all(4),
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: bgCol,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: textCol.withValues(alpha: 0.3)),
+                        ),
+                        child: Icon(icon, size: 16, color: textCol),
+                      );
+                    }),
                   // Favorite Star Button
                   SizedBox(
                     width: 32,

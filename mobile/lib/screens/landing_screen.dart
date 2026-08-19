@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/app_colors.dart';
 import '../services/api_client.dart';
 import 'onboarding_screen.dart';
@@ -20,8 +21,8 @@ class LandingScreen extends StatelessWidget {
                 const Spacer(flex: 3),
                 
                 // Logo
-                Image.asset(
-                  'assets/images/logo_demok_vf.png',
+                SvgPicture.asset(
+                  'assets/images/logo_demok_vf.svg',
                   width: 178,
                   height: 178,
                   fit: BoxFit.contain,

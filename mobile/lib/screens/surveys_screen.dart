@@ -5,6 +5,7 @@ import '../models/candidate.dart';
 import '../services/user_session.dart';
 import '../theme/app_colors.dart';
 import '../services/api_client.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SurveysScreen extends StatefulWidget {
   const SurveysScreen({Key? key}) : super(key: key);
@@ -21,6 +22,14 @@ class _SurveysScreenState extends State<SurveysScreen> {
   String? _error;
   final GlobalKey _presidentialKey = GlobalKey();
   final GlobalKey _candidatesKey = GlobalKey();
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -144,24 +153,11 @@ class _SurveysScreenState extends State<SurveysScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          automaticallyImplyLeading: true,
-          title: const Text(
-            'Sondage Présidentielle 2027',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : _buildContent(),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : _buildContent(),
     );
   }
 
@@ -224,6 +220,33 @@ class _SurveysScreenState extends State<SurveysScreen> {
           // --- PRÉSIDENTIELLE 2027 (toujours en premier) ---
           const Text('Présidentielle 2027', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
+          // Barre de recherche
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un candidat...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primaryBlue),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
+            },
+          ),
+          const SizedBox(height: 16),
           // Horizontal scrollable row of candidates
           // Grid display of candidates
           LayoutBuilder(
@@ -237,6 +260,19 @@ class _SurveysScreenState extends State<SurveysScreen> {
                   crossAxisCount = 3;
                 }
                 
+                final filteredCandidates = _candidates.where((c) {
+                  final matchesName = c.name.toLowerCase().contains(_searchQuery);
+                  final matchesParty = c.party.toLowerCase().contains(_searchQuery);
+                  return matchesName || matchesParty;
+                }).toList();
+
+                if (filteredCandidates.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(32.0),
+                    child: Center(child: Text("Aucun candidat trouvé pour cette recherche.")),
+                  );
+                }
+
                 return GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -246,9 +282,9 @@ class _SurveysScreenState extends State<SurveysScreen> {
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: _candidates.length,
+                  itemCount: filteredCandidates.length,
                   itemBuilder: (context, index) {
-                    return _buildCandidateCard(_candidates[index]);
+                    return _buildCandidateCard(filteredCandidates[index]);
                   },
                 );
               },
@@ -263,7 +299,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
       shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => _showVoteConfirmation(candidate),
+        onTap: () => _showCandidateDetail(candidate),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -342,6 +378,144 @@ class _SurveysScreenState extends State<SurveysScreen> {
     );
   }
 
+  void _showCandidateDetail(Candidate candidate) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.only(top: 24, left: 24, right: 24, bottom: 32),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+            ),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Poignée du modal
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Photo du candidat (s'il y en a une, différente du logo du parti)
+                if (candidate.fullPhotoUrl != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      candidate.fullPhotoUrl!,
+                      height: 120,
+                      width: 100,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.account_circle, size: 80, color: Colors.grey),
+                    ),
+                  )
+                else
+                  const Icon(Icons.account_circle, size: 80, color: Colors.grey),
+                const SizedBox(height: 16),
+                
+                // Nom et parti
+                Text(
+                  candidate.name,
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  candidate.party,
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                
+                // Résumé IA
+                if (candidate.description != null && candidate.description!.isNotEmpty)
+                  Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          candidate.description!,
+                          style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Généré par Mistral IA",
+                        style: TextStyle(
+                          fontStyle: FontStyle.italic,
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 24),
+                
+                // Bouton Programme
+                if (candidate.programUrl != null && candidate.programUrl!.isNotEmpty)
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final url = Uri.parse(candidate.programUrl!);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      }
+                    },
+                    icon: const Icon(Icons.public, size: 20),
+                    label: const Text("Voir le programme"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primaryBlue,
+                      side: const BorderSide(color: AppColors.primaryBlue),
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                
+                const SizedBox(height: 24),
+                
+                // Bouton de Vote
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showVoteConfirmation(candidate);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text(
+                      "Voter pour ce profil",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showVoteConfirmation(Candidate candidate) {
     showDialog(
       context: context,
@@ -376,8 +550,17 @@ class _SurveysScreenState extends State<SurveysScreen> {
   Widget _buildResultsInline() {
     final results = _results!['results'] as List<dynamic>;
 
+    // Filter results based on search query
+    final filteredResults = results.where((r) {
+      final name = r['name'] as String? ?? '';
+      final party = r['party'] as String? ?? '';
+      final matchesName = name.toLowerCase().contains(_searchQuery);
+      final matchesParty = party.toLowerCase().contains(_searchQuery);
+      return matchesName || matchesParty;
+    }).toList();
+
     // Tri sur le NOM (tout ce qui suit le premier mot)
-    results.sort((a, b) {
+    filteredResults.sort((a, b) {
       String nameA = a['name'] as String;
       String nameB = b['name'] as String;
       String partA = nameA.trim().contains(' ') ? nameA.trim().split(' ').sublist(1).join(' ').toLowerCase() : nameA.toLowerCase();
@@ -416,26 +599,31 @@ class _SurveysScreenState extends State<SurveysScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Bouton Modifier mon vote
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                setState(() {
-                  _hasVoted = false;
-                  _results = null;
-                });
-              },
-              icon: const Icon(Icons.edit, size: 18),
-              label: const Text('Modifier mon vote'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primaryBlue,
-                textStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  decoration: TextDecoration.underline,
-                ),
+          // Barre de recherche
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un candidat...',
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primaryBlue),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value.toLowerCase();
+              });
+            },
           ),
           const SizedBox(height: 16),
           // Grid display of results
@@ -449,6 +637,13 @@ class _SurveysScreenState extends State<SurveysScreen> {
               } else if (constraints.maxWidth > 600) {
                 crossAxisCount = 3;
               }
+              
+              if (filteredResults.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Center(child: Text("Aucun candidat trouvé pour cette recherche.")),
+                );
+              }
 
               return GridView.builder(
                 shrinkWrap: true,
@@ -459,9 +654,9 @@ class _SurveysScreenState extends State<SurveysScreen> {
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                 ),
-                itemCount: results.length,
+                itemCount: filteredResults.length,
                 itemBuilder: (context, index) {
-                  return _buildResultCard(results[index]);
+                  return _buildResultCard(filteredResults[index]);
                 },
               );
             },
@@ -479,64 +674,71 @@ class _SurveysScreenState extends State<SurveysScreen> {
       name: result['name'],
       party: result['party'],
       photoUrl: result['photoUrl'],
+      description: result['description'],
+      programUrl: result['programUrl'],
+      partyLogoUrl: result['partyLogoUrl'],
     );
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-             // Petit Logo en haut des résultats
-             if (candidate.logoPath != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8.0),
-                  child: candidate.isNetworkLogo
-                      ? (candidate.isSvgLogo
-                          ? SvgPicture.network(
-                              candidate.logoPath!,
-                              height: 30,
-                              fit: BoxFit.contain,
-                            )
-                          : Image.network(
-                              candidate.logoPath!,
-                              height: 30,
-                              fit: BoxFit.contain,
-                            ))
-                      : (candidate.isSvgLogo
-                          ? SvgPicture.asset(
-                              candidate.logoPath!,
-                              height: 30,
-                              fit: BoxFit.contain,
-                            )
-                          : Image.asset(
-                              candidate.logoPath!,
-                              height: 30,
-                              fit: BoxFit.contain,
-                            )),
+    return InkWell(
+      onTap: () => _showCandidateDetail(candidate),
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+               // Petit Logo en haut des résultats
+               if (candidate.logoPath != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: candidate.isNetworkLogo
+                        ? (candidate.isSvgLogo
+                            ? SvgPicture.network(
+                                candidate.logoPath!,
+                                height: 30,
+                                fit: BoxFit.contain,
+                              )
+                            : Image.network(
+                                candidate.logoPath!,
+                                height: 30,
+                                fit: BoxFit.contain,
+                              ))
+                        : (candidate.isSvgLogo
+                            ? SvgPicture.asset(
+                                candidate.logoPath!,
+                                height: 30,
+                                fit: BoxFit.contain,
+                              )
+                            : Image.asset(
+                                candidate.logoPath!,
+                                height: 30,
+                                fit: BoxFit.contain,
+                              )),
+                  ),
+              Text(
+                result['name'],
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
-            Text(
-              result['name'],
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${percentage.toStringAsFixed(1)}%',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryBlue,
+              const SizedBox(height: 4),
+              Text(
+                '${percentage.toStringAsFixed(1)}%',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryBlue,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

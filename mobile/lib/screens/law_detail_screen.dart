@@ -318,9 +318,45 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
 
 
                         // Résultats du vote des députés AVANT le parcours législatif pour visibilité immédiate
-                        if (widget.law.deputyVoteResult != null) ...[
-                          _buildDeputyVoteResultSection(widget.law.deputyVoteResult!),
+                        if (widget.law.isPromulgated) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.teal),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.verified, color: Colors.teal),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text("Loi promulguée le ${widget.law.datePromulgation!.day.toString().padLeft(2, '0')}/${widget.law.datePromulgation!.month.toString().padLeft(2, '0')}/${widget.law.datePromulgation!.year}", style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold))),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 16),
+                        ] else if (widget.law.deputyVoteResult != null) ...[
+                          if (widget.law.deputyVoteResult!.isSimplified == true) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.blue),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.info_outline, color: Colors.blue),
+                                  SizedBox(width: 8),
+                                  Expanded(child: Text("Texte adopté par procédure simplifiée (sans scrutin public)", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold))),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ] else ...[
+                            _buildDeputyVoteResultSection(widget.law.deputyVoteResult!),
+                            const SizedBox(height: 16),
+                          ],
                         ] else if (widget.law.lawStatus == LawStatus.votedAn || 
                                    widget.law.lawStatus == LawStatus.validated || 
                                    widget.law.lawStatus == LawStatus.rejected ||
@@ -598,6 +634,57 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             ),
           ),
           
+          // User vote display
+          if (widget.law.userVote != null)
+            Builder(builder: (context) {
+              String label;
+              Color bgCol;
+              Color textCol;
+              IconData icon;
+
+              if (widget.law.userVote == 'FOR') {
+                label = 'Vous avez voté pour';
+                bgCol = AppColors.votePour.withValues(alpha: 0.15);
+                textCol = AppColors.votePour;
+                icon = Icons.thumb_up_rounded;
+              } else if (widget.law.userVote == 'AGAINST') {
+                label = 'Vous avez voté contre';
+                bgCol = AppColors.voteContre.withValues(alpha: 0.15);
+                textCol = AppColors.voteContre;
+                icon = Icons.thumb_down_rounded;
+              } else {
+                label = 'Vous avez voté neutre';
+                bgCol = AppColors.voteAbstention.withValues(alpha: 0.15);
+                textCol = AppColors.voteAbstention;
+                icon = Icons.remove_circle_outline_rounded;
+              }
+
+              return Container(
+                margin: const EdgeInsets.only(top: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: bgCol,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: textCol.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(icon, size: 20, color: textCol),
+                    const SizedBox(width: 8),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: textCol,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          
           // Deputy comparison
           if (_voteResult!['deputyVote'] != null) ...[
             const SizedBox(height: 16),
@@ -618,8 +705,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
           // Modify vote button (only for votable laws: UPCOMING or PENDING)
           if (widget.law.isVotable && !_isModifyingVote) ...[ 
             const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -822,11 +907,15 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
           BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      child: ExpansionTile(
-        initiallyExpanded: false,
-        title: Row(
-          children: [
-            const Icon(Icons.edit_note, color: AppColors.primaryBlue, size: 20),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const Border(),
+          collapsedShape: const Border(),
+          initiallyExpanded: false,
+          title: Row(
+            children: [
+              const Icon(Icons.edit_note, color: AppColors.primaryBlue, size: 20),
             const SizedBox(width: 8),
             const Text('Amendements',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.darkBlue)),
@@ -938,6 +1027,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             ],
           ],
         ],
+      ),
       ),
     );
   }
@@ -1065,11 +1155,15 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
           ),
         ],
       ),
-      child: ExpansionTile(
-        title: Row(
-          children: [
-            const Icon(Icons.account_balance, color: AppColors.primaryBlue, size: 20),
-            const SizedBox(width: 8),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: Row(
+            children: [
+              const Icon(Icons.account_balance, color: AppColors.primaryBlue, size: 20),
+              const SizedBox(width: 8),
             const Expanded(
               child: Text(
                 'Parcours & Détails',
@@ -1097,9 +1191,13 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                 2, 
                 lawStatus == LawStatus.rejected ? 'Rejetée' : 'Adoptée (AN)', 
                 currentStep >= 2, 
-                true,
+                widget.law.isPromulgated ? false : true,
                 isRejected: lawStatus == LawStatus.rejected,
               ),
+              if (widget.law.isPromulgated) ...[
+                _buildTimelineLine(true),
+                _buildTimelineStep(3, 'Promulguée', true, true),
+              ]
             ],
           ),
           
@@ -1140,6 +1238,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1249,17 +1348,18 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               : null,
           ),
           const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              color: isActive ? activeColor : Colors.black54,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive ? activeColor : Colors.black54,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.visible,
-            softWrap: false,
           ),
           if (subtitle != null) ...[
              const SizedBox(height: 2),

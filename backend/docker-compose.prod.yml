@@ -27,6 +27,8 @@ services:
       - FRONTEND_URL=${FRONTEND_URL}
       - ADMIN_KEY=${ADMIN_KEY}
       - VOTE_SECRET=${VOTE_SECRET}
+    volumes:
+      - ./uploads:/app/uploads
     depends_on:
       - db
       - redis

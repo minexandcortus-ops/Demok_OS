@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
+import * as crypto from 'crypto';
 import { Citizen } from '../users/citizen.entity';
 import { CitizenLevel } from './entities/citizen-level.entity';
 import { VoteRegistry } from '../votes/vote-registry.entity';
+import { VoteUrna } from '../votes/vote-choice.entity';
 import { Law } from '../laws/law.entity';
 import { GameConstants } from './game-constants';
 import { VoteCastEvent } from '../votes/events/vote-cast.event';
@@ -22,6 +24,8 @@ export class GamificationService {
         private readonly voteRegistryRepository: Repository<VoteRegistry>,
         @InjectRepository(Law)
         private readonly lawRepository: Repository<Law>,
+        @InjectRepository(VoteUrna)
+        private readonly voteUrnaRepository: Repository<VoteUrna>,
     ) { }
 
     /**
@@ -277,6 +281,28 @@ export class GamificationService {
             ? (xpInCurrentLevel / xpNeededForNextLevel) * 100
             : 100;
 
+        const votes = await this.voteRegistryRepository.find({ 
+            where: { citizen: { id: citizen.id } },
+            relations: ['law']
+        });
+        
+        let votesPour = 0;
+        let votesContre = 0;
+        let votesNeutre = 0;
+
+        if (votes.length > 0) {
+            const secret = process.env.VOTE_SECRET;
+            if (secret) {
+                const tokens = votes.map(v => crypto.createHmac('sha256', secret).update(`${citizen.id}:${v.law.id}`).digest('hex'));
+                const voteUrnas = await this.voteUrnaRepository.find({
+                    where: { voterToken: In(tokens) }
+                });
+                votesPour = voteUrnas.filter(v => v.choice === 'FOR').length;
+                votesContre = voteUrnas.filter(v => v.choice === 'AGAINST').length;
+                votesNeutre = voteUrnas.filter(v => v.choice === 'ABSTAIN').length;
+            }
+        }
+
         return {
             currentLevel: citizen.currentLevel,
             levelName: currentLevelData?.name || 'Observateur',
@@ -286,6 +312,9 @@ export class GamificationService {
             nextLevelXP: nextLevelData?.xpRequired || null,
             progressPercentage: Math.min(progressPercentage, 100),
             totalVotes: citizen.totalVotes,
+            votesPour,
+            votesContre,
+            votesNeutre,
             consecutiveDays: citizen.consecutiveConnectionDays,
             weeklyStreak: citizen.weeklyVoteStreak,
         };

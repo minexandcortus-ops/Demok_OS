@@ -115,10 +115,13 @@ class Law {
       case LawStatus.pending:   return 'Discussion en cours';
       case LawStatus.votedAn:   return 'Adoptée';
       case LawStatus.atSenate:  return 'Au Sénat';
-      case LawStatus.validated: return 'Adoptée';
+      case LawStatus.validated: return 'Promulguée';
       case LawStatus.rejected:  return 'Rejetée';
     }
   }
+
+  /// Indique si la loi est promulguée.
+  bool get isPromulgated => lawStatus == LawStatus.validated && datePromulgation != null;
 
   /// Indique si le vote de cette loi est prévu aujourd'hui ("Vote aujourd'hui").
   bool get isVoteToday {

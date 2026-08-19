@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/amendement.dart';
 import '../theme/app_colors.dart';
+import '../screens/deputy_detail_screen.dart';
+import '../services/deputies_service.dart';
 
 /// Widget card pour afficher un amendement dans une liste.
 class AmendementCard extends StatefulWidget {
@@ -14,6 +16,52 @@ class AmendementCard extends StatefulWidget {
 
 class _AmendementCardState extends State<AmendementCard> {
   bool _isExpanded = false;
+  bool _isLoadingAuthor = false;
+
+  Future<void> _handleAuthorClick(BuildContext context) async {
+    final auteurStr = widget.amendement.auteur.toLowerCase();
+    if (auteurStr.contains('gouvernement')) {
+      return; // Pas de profil pour le gouvernement
+    }
+
+    setState(() {
+      _isLoadingAuthor = true;
+    });
+
+    try {
+      // Nettoyer le nom pour la recherche
+      String searchName = widget.amendement.auteur.split(',').first.split(' et ').first;
+      searchName = searchName.replaceAll('M. ', '').replaceAll('Mme ', '').trim();
+
+      final deputies = await DeputiesService.searchDeputies(query: searchName, limit: 1);
+      
+      if (!context.mounted) return;
+      
+      if (deputies.isNotEmpty) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DeputyDetailScreen(deputy: deputies.first),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Député introuvable')),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur lors de la recherche du député')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingAuthor = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,16 +108,35 @@ class _AmendementCardState extends State<AmendementCard> {
                 Icon(Icons.person_outline, size: 16, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Expanded(
-                  child: Text(
-                    widget.amendement.auteur,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade700,
+                  child: InkWell(
+                    onTap: _isLoadingAuthor || widget.amendement.auteur.toLowerCase().contains('gouvernement')
+                        ? null 
+                        : () => _handleAuthorClick(context),
+                    child: Text(
+                      widget.amendement.auteur,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: widget.amendement.auteur.toLowerCase().contains('gouvernement') 
+                            ? Colors.grey.shade700 
+                            : AppColors.primaryBlue,
+                        decoration: widget.amendement.auteur.toLowerCase().contains('gouvernement')
+                            ? TextDecoration.none
+                            : TextDecoration.underline,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (_isLoadingAuthor)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0),
+                    child: SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
               ],
             ),
 

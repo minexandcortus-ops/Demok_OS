@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="robots" content="noindex, nofollow, noarchive" />
   <title>Démok — Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,6 +30,8 @@
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      overflow-x: hidden;
+      width: 100%;
     }
 
     /* ── LOGIN SCREEN ── */
@@ -575,27 +577,66 @@
     <!-- Reports list -->
     <div class="reports-list" id="reports-list" style="display:none;"></div>
 
-    <!-- ── DEBATES SECTION ── -->
+    <!-- ── CANDIDATES SECTION ── -->
     <hr class="section-divider" />
     <div class="toolbar">
-      <h2>💬 Modération des débats</h2>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <input type="checkbox" id="opinion-reported-only" checked onchange="searchOpinions()" style="width:18px; height:18px; cursor:pointer;" />
-        <label for="opinion-reported-only" style="font-size:14px; cursor:pointer; color:var(--text-muted)">Signalés uniquement</label>
+      <h2>🇫🇷 Candidats Présidentielle 2027</h2>
+      <button class="filter-btn" onclick="openCreateCandidateModal()" style="margin-left: auto;">+ Nouveau Candidat</button>
+      <button class="filter-btn" onclick="loadCandidates()">↻ Actualiser</button>
+    </div>
+
+    <div id="candidates-results" class="reports-list"></div>
+
+    <!-- Modal Create/Edit Candidate -->
+    <div class="confirm-overlay" id="candidate-modal-overlay" style="display:none;">
+      <div class="confirm-box" style="max-width: 600px; text-align: left;">
+        <h3 id="candidate-modal-title">Nouveau Candidat</h3>
+        <input type="hidden" id="candidate-id" />
+        
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Nom du candidat</label>
+          <input type="text" id="candidate-name" class="admin-input" style="width: 100%" placeholder="Ex: Gabriel Attal" />
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Nom du parti</label>
+          <input type="text" id="candidate-party" class="admin-input" style="width: 100%" placeholder="Ex: Renaissance" />
+        </div>
+
+        <div style="margin-bottom: 12px; display: flex; gap: 12px;">
+          <div style="flex: 1;">
+            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Photo (Lien ou Fichier)</label>
+            <input type="text" id="candidate-photoUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="URL de la photo" />
+            <input type="file" id="candidate-photoFile" accept="image/*" style="font-size: 12px; color: var(--text-muted);" />
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Logo parti (Lien ou Fichier)</label>
+            <input type="text" id="candidate-partyLogoUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="URL du logo" />
+            <input type="file" id="candidate-partyLogoFile" accept="image/*" style="font-size: 12px; color: var(--text-muted);" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px; display: flex; gap: 12px;">
+          <div style="flex: 1;">
+            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Lien du programme (Lien web ou PDF)</label>
+            <input type="text" id="candidate-programUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="URL du programme" />
+            <input type="file" id="candidate-programFile" accept="application/pdf, image/*" style="font-size: 12px; color: var(--text-muted);" />
+          </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Résumé Mistral IA</label>
+          <textarea id="candidate-description" class="admin-input" style="width: 100%; height: 100px; resize: vertical;" placeholder="Résumé IA du programme..."></textarea>
+        </div>
+        
+        <div class="confirm-actions">
+          <button class="btn-cancel" onclick="closeCandidateModal()">Annuler</button>
+          <button class="btn-primary" style="width: auto;" onclick="submitCandidate()">Enregistrer</button>
+        </div>
       </div>
     </div>
 
-    <div class="law-search-bar" id="opinion-search-container" style="display:none;">
-      <input type="text" id="opinion-search-input" placeholder="Rechercher dans les commentaires…" />
-      <button class="btn-search" onclick="searchOpinions()">Rechercher</button>
-    </div>
-
-    <div id="opinions-results" class="reports-list"></div>
-    <div id="opinions-load-more" style="text-align:center; margin-top:16px; display:none;">
-      <button class="filter-btn" onclick="searchOpinions(true)" style="width: 100%; max-width: 300px; padding: 12px; font-weight: 600;">⬇️ Charger plus de commentaires</button>
-    </div>
-
-    <!-- ── POLLS SECTION ── -->
+<!-- ── POLLS SECTION ── -->
     <hr class="section-divider" />
 
     <div class="toolbar">
@@ -607,7 +648,7 @@
       <div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des sondages…</div>
     </div>
 
-    <!-- ── LAWS SECTION ── -->
+        <!-- ── LAWS SECTION ── -->
     <hr class="section-divider" />
 
     <div class="toolbar">
@@ -732,7 +773,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_BASE = 'https://demok.51.159.162.253.nip.io/api';
+  const API_BASE = 'https://demok.votre-domaine.com/api';
   let adminKey = sessionStorage.getItem('demok_admin_key') || '';
   let allReports = [];
   let allLaws = [];
@@ -801,7 +842,6 @@
       updateStats();
       renderReports(currentFilter);
       searchLaws();
-      searchOpinions();
       loadPolls();
 
     } catch (e) {
@@ -1264,106 +1304,163 @@
     }
   }
 
-  // ── Debates moderation ──
-  let opinionsOffset = 0;
-  const OPINIONS_LIMIT = 10;
-
-  async function searchOpinions(isLoadMore = false) {
-    const q = document.getElementById('opinion-search-input').value.trim();
-    const reportedOnly = document.getElementById('opinion-reported-only').checked;
-    const container = document.getElementById('opinions-results');
-    const loadMoreBtn = document.getElementById('opinions-load-more');
-
-    if (!isLoadMore) {
-      opinionsOffset = 0;
-      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des débats…</div>';
-      loadMoreBtn.style.display = 'none';
-    } else {
-      opinionsOffset += OPINIONS_LIMIT;
-    }
-
+  // ── CANDIDATES MANAGEMENT ──
+  async function loadCandidates() {
+    const container = document.getElementById('candidates-results');
+    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des candidats…</div>';
     try {
-      let url = `${API_BASE}/admin/debates?limit=${OPINIONS_LIMIT}&offset=${opinionsOffset}&reportedOnly=${reportedOnly}&`;
-      if (q) url += `q=${encodeURIComponent(q)}`;
-
-      const res = await fetch(url, { headers: { 'x-admin-key': adminKey } });
-      const data = await res.json();
-
-      if (!isLoadMore) container.innerHTML = '';
-
-      if ((!data.opinions || data.opinions.length === 0) && !isLoadMore) {
-        container.innerHTML = '<div class="empty-state"><div class="icon">💬</div><p>Aucun commentaire trouvé.</p></div>';
+      const res = await fetch(`${API_BASE}/admin/candidates`, { headers: { 'x-admin-key': adminKey } });
+      const candidates = await res.json();
+      
+      if (!candidates || candidates.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>Aucun candidat trouvé.</p></div>';
         return;
       }
 
-      const opinionsHtml = data.opinions.map(op => `
-        <div class="report-card" id="opinion-card-${op.id}">
+      container.innerHTML = candidates.map(c => `
+        <div class="report-card">
           <div class="report-header">
             <div class="report-meta">
-              <span class="badge badge-category">👤 ${escapeHtml(op.userPseudo)}</span>
-              <span class="report-date">${formatDate(op.createdAt)}</span>
-            </div>
-            <div class="badge badge-RESOLVED">👍 ${op.mokes}</div>
-          </div>
-          <div class="report-description">${escapeHtml(op.content)}</div>
-          <div class="report-footer">
-            <div class="report-ids">
-              ⚖️ Loi: ${escapeHtml(op.lawTitle)}
-              ${op.reportsCount > 0 ? `<br/><span style="color:var(--danger); font-weight:600;">⚠️ ${op.reportsCount} signalement(s)</span>` : ''}
+              <span style="font-size: 16px; font-weight: bold;">${escapeHtml(c.name)}</span>
+              <span class="badge badge-category">${escapeHtml(c.party)}</span>
             </div>
             <div class="status-actions">
-              <button class="btn-status btn-rejected" onclick="confirmDeleteOpinion('${op.id}')">Supprimer</button>
+              <button class="btn-status btn-review" onclick='editCandidate(${JSON.stringify(c).replace(/'/g, "&#39;")})'>Modifier</button>
+              <button class="btn-status btn-rejected" onclick="deleteCandidate('${c.id}')">Supprimer</button>
             </div>
           </div>
+          <div class="report-description" style="font-size: 12px;">${c.description ? escapeHtml(c.description) : '<em>Aucun résumé</em>'}</div>
         </div>
       `).join('');
-
-      if (isLoadMore) {
-        container.insertAdjacentHTML('beforeend', opinionsHtml);
-      } else {
-        container.innerHTML = opinionsHtml;
-      }
-
-      if (data.total > opinionsOffset + data.opinions.length) {
-        loadMoreBtn.style.display = 'block';
-      } else {
-        loadMoreBtn.style.display = 'none';
-      }
-
     } catch (e) {
-      if (!isLoadMore) {
-        container.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Erreur: ${e.message}</p></div>`;
-      }
-      console.error(e);
+      container.innerHTML = `<div class="empty-state"><p>Erreur: ${e.message}</p></div>`;
     }
   }
 
-  function confirmDeleteOpinion(id) {
-    document.getElementById('confirm-title').textContent = 'Supprimer ce commentaire ?';
-    document.getElementById('confirm-body').innerHTML = 'Voulez-vous vraiment supprimer définitivement ce commentaire ?<br/><br/>⚠️ Cette action est irréversible.';
-    document.getElementById('confirm-ok').onclick = () => { closeConfirm(); deleteOpinion(id); };
-    document.getElementById('confirm-overlay').style.display = 'flex';
+  function openCreateCandidateModal() {
+    document.getElementById('candidate-id').value = '';
+    document.getElementById('candidate-name').value = '';
+    document.getElementById('candidate-party').value = '';
+    document.getElementById('candidate-photoUrl').value = '';
+    document.getElementById('candidate-photoFile').value = '';
+    document.getElementById('candidate-partyLogoUrl').value = '';
+    document.getElementById('candidate-partyLogoFile').value = '';
+    document.getElementById('candidate-programUrl').value = '';
+    document.getElementById('candidate-programFile').value = '';
+    document.getElementById('candidate-description').value = '';
+    
+    document.getElementById('candidate-modal-title').textContent = 'Nouveau Candidat';
+    document.getElementById('candidate-modal-overlay').style.display = 'flex';
   }
 
-  async function deleteOpinion(id) {
+  function editCandidate(c) {
+    document.getElementById('candidate-id').value = c.id;
+    document.getElementById('candidate-name').value = c.name;
+    document.getElementById('candidate-party').value = c.party;
+    document.getElementById('candidate-photoUrl').value = c.photoUrl || '';
+    document.getElementById('candidate-photoFile').value = '';
+    document.getElementById('candidate-partyLogoUrl').value = c.partyLogoUrl || '';
+    document.getElementById('candidate-partyLogoFile').value = '';
+    document.getElementById('candidate-programUrl').value = c.programUrl || '';
+    document.getElementById('candidate-programFile').value = '';
+    document.getElementById('candidate-description').value = c.description || '';
+    
+    document.getElementById('candidate-modal-title').textContent = 'Modifier Candidat';
+    document.getElementById('candidate-modal-overlay').style.display = 'flex';
+  }
+
+  function closeCandidateModal() {
+    document.getElementById('candidate-modal-overlay').style.display = 'none';
+  }
+
+  async function uploadFile(fileInputId) {
+    const fileInput = document.getElementById(fileInputId);
+    if (!fileInput.files || fileInput.files.length === 0) return null;
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    
     try {
-      const res = await fetch(`${API_BASE}/admin/debates/${id}`, {
+      const res = await fetch(`${API_BASE}/admin/candidates/upload`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey },
+        body: formData
+      });
+      const data = await res.json();
+      return data.url;
+    } catch(e) {
+      showToast('Erreur upload fichier', 'error');
+      return null;
+    }
+  }
+
+  async function submitCandidate() {
+    const id = document.getElementById('candidate-id').value;
+    const name = document.getElementById('candidate-name').value.trim();
+    const party = document.getElementById('candidate-party').value.trim();
+    const description = document.getElementById('candidate-description').value.trim();
+    
+    if (!name || !party) {
+      showToast('Nom et parti requis', 'error');
+      return;
+    }
+
+    let photoUrl = document.getElementById('candidate-photoUrl').value.trim();
+    let programUrl = document.getElementById('candidate-programUrl').value.trim();
+    let partyLogoUrl = document.getElementById('candidate-partyLogoUrl').value.trim();
+
+    // Upload files if selected
+    const uploadedPhoto = await uploadFile('candidate-photoFile');
+    if (uploadedPhoto) photoUrl = uploadedPhoto;
+
+    const uploadedProgram = await uploadFile('candidate-programFile');
+    if (uploadedProgram) programUrl = uploadedProgram;
+    
+    const uploadedPartyLogo = await uploadFile('candidate-partyLogoFile');
+    if (uploadedPartyLogo) partyLogoUrl = uploadedPartyLogo;
+
+    const payload = {
+      name, party, description, photoUrl, programUrl, partyLogoUrl
+    };
+
+    const method = id ? 'PUT' : 'POST';
+    const url = id ? `${API_BASE}/admin/candidates/${id}` : `${API_BASE}/admin/candidates`;
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        showToast(id ? 'Candidat modifié' : 'Candidat ajouté', 'success');
+        closeCandidateModal();
+        loadCandidates();
+      } else {
+        showToast('Erreur de sauvegarde', 'error');
+      }
+    } catch (e) {
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  async function deleteCandidate(id) {
+    if(!confirm("Supprimer ce candidat définitivement ?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/admin/candidates/${id}`, {
         method: 'DELETE',
         headers: { 'x-admin-key': adminKey }
       });
       if (res.ok) {
-        showToast('Commentaire supprimé ✓', 'success');
-        document.getElementById(`opinion-card-${id}`)?.remove();
+        showToast('Candidat supprimé', 'success');
+        loadCandidates();
       }
     } catch (e) {
-      showToast('Erreur lors de la suppression', 'error');
+      showToast('Erreur', 'error');
     }
   }
 
-  // Event listener for search
-  document.getElementById('opinion-search-input')?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') searchOpinions();
-  });
 </script>
 
 </body>

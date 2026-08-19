@@ -107,19 +107,28 @@ class _GamificationScreenState extends State<GamificationScreen> {
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              '${_progress!.totalVotes}',
-                              'Votes',
-                              Icons.how_to_vote,
+                              '${_progress!.votesPour}',
+                              'Pour',
+                              Icons.thumb_up_rounded,
                               AppColors.votePour,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildStatCard(
-                              '${_progress!.consecutiveDays}',
-                              'Jours consécutifs',
-                              Icons.local_fire_department,
-                              Colors.orange,
+                              '${_progress!.votesNeutre}',
+                              'Neutre',
+                              Icons.remove_circle_outline_rounded,
+                              AppColors.voteAbstention,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildStatCard(
+                              '${_progress!.votesContre}',
+                              'Contre',
+                              Icons.thumb_down_rounded,
+                              AppColors.voteContre,
                             ),
                           ),
                         ],

@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { Law } from './laws/law.entity';
 import { LawFavorite } from './laws/law-favorite.entity';
@@ -42,6 +44,11 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
         // Bull Queue avec Redis (Phase 3)
         BullModule.forRoot({
             redis: process.env.REDIS_URL,
+        }),
+        
+        ServeStaticModule.forRoot({
+            rootPath: join(__dirname, '..', 'uploads'),
+            serveRoot: '/uploads',
         }),
 
         TypeOrmModule.forRoot({

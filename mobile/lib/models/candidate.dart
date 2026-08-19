@@ -1,16 +1,22 @@
+import '../config/env.dart';
+
 class Candidate {
   final String id;
   final String name;
   final String party;
   final String? photoUrl;
+  final String? partyLogoUrl;
   final String? description;
+  final String? programUrl;
 
   Candidate({
     required this.id,
     required this.name,
     required this.party,
     this.photoUrl,
+    this.partyLogoUrl,
     this.description,
+    this.programUrl,
   });
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
@@ -19,14 +25,22 @@ class Candidate {
       name: json['name'],
       party: json['party'],
       photoUrl: json['photoUrl'],
+      partyLogoUrl: json['partyLogoUrl'],
       description: json['description'],
+      programUrl: json['programUrl'],
     );
   }
 
-  bool get isNetworkLogo => photoUrl != null && photoUrl!.startsWith('http');
+  bool get isNetworkLogo => partyLogoUrl != null && (partyLogoUrl!.startsWith('http') || partyLogoUrl!.startsWith('/api'));
 
   String? get logoPath {
-    if (isNetworkLogo) return photoUrl;
+    if (isNetworkLogo) {
+      if (partyLogoUrl!.startsWith('/api')) {
+        final base = Env.apiUrl.replaceAll(RegExp(r'/api$'), '');
+        return base + partyLogoUrl!;
+      }
+      return partyLogoUrl;
+    }
 
     final Map<String, String> partyLogos = {
       "L'Après / Divers Gauche": 'assets/images/logos_partis/l_apres.svg',
@@ -47,10 +61,21 @@ class Candidate {
       "Reconquête !": 'assets/images/logos_partis/Reconquete_logo.svg',
       "Nouveau Parti Anticapitaliste": 'assets/images/logos_partis/Nouveau_Parti_Anticapitaliste_logo.png',
       "Révolution Permanente": 'assets/images/logos_partis/Revolution_Permanente_logo.svg',
+      "Union populaire républicaine": 'assets/images/logos_partis/Union_Populaire_Republicaine_logo.jpg',
     };
 
     return partyLogos[party];
   }
 
   bool get isSvgLogo => logoPath?.endsWith('.svg') ?? false;
+
+  String? get fullPhotoUrl {
+    if (photoUrl == null) return null;
+    if (photoUrl!.startsWith('http')) return photoUrl;
+    if (photoUrl!.startsWith('/api')) {
+      final base = Env.apiUrl.replaceAll(RegExp(r'/api$'), '');
+      return base + photoUrl!;
+    }
+    return photoUrl;
+  }
 }

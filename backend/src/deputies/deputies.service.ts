@@ -47,7 +47,14 @@ export class DeputiesService {
             .where('deputy.isActive = :isActive', { isActive: true });
         
         if (query) {
-            qb.andWhere('(deputy.fullName ILIKE :q OR deputy.constituencyCode ILIKE :q OR deputy.department ILIKE :q)', { q: `%${query}%` });
+            const words = query.trim().split(/\s+/).filter(w => w.length > 0);
+            if (words.length > 0) {
+                const conditions = words.map((word, i) => {
+                    qb.setParameter(`q${i}`, `%${word}%`);
+                    return `(deputy.fullName ILIKE :q${i} OR deputy.constituencyCode ILIKE :q${i} OR deputy.department ILIKE :q${i})`;
+                });
+                qb.andWhere(`(${conditions.join(' AND ')})`);
+            }
         }
 
         if (userConstituencyCode) {

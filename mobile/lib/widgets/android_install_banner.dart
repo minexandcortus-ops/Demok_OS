@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/user_session.dart';
 import '../services/pwa_install_service.dart';
 import '../theme/app_colors.dart';
@@ -33,15 +34,13 @@ class AndroidInstallBanner extends StatelessWidget {
         child: Row(
           children: [
             // Icône app
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/logo_demok_vf.png'),
-                  fit: BoxFit.contain,
-                ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SvgPicture.asset(
+                'assets/images/logo_demok_vf.svg',
+                width: 52,
+                height: 52,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(width: 12),
