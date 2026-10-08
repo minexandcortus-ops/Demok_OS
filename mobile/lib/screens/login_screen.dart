@@ -335,6 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    if (!UserSession().isLoggedIn && !UserSession().isGuest) {
+      UserSession().isAppActiveNotifier.value = false;
+    }
     _pseudoController.dispose();
     _passwordController.dispose();
     _pseudoFocus.dispose();

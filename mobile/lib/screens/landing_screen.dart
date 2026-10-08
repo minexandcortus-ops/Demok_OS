@@ -51,6 +51,7 @@ class LandingScreen extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
+                          UserSession().isAppActiveNotifier.value = true;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -81,6 +82,7 @@ class LandingScreen extends StatelessWidget {
                       width: double.infinity,
                       child: OutlinedButton(
                         onPressed: () {
+                          UserSession().isAppActiveNotifier.value = true;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
