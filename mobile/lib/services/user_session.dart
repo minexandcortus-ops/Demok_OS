@@ -26,6 +26,9 @@ class UserSession {
   bool _isGuestInMemory = false;
   bool get isGuest => _isGuestInMemory;
   
+  // Notifier to trigger Desktop UI animations
+  final ValueNotifier<bool> isAppActiveNotifier = ValueNotifier<bool>(false);
+  
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     
@@ -40,6 +43,8 @@ class UserSession {
     email = _prefs?.getString('session_email');
     birthYear = _prefs?.getInt('session_birthYear');
     accessToken = _prefs?.getString('session_token');
+
+    isAppActiveNotifier.value = isLoggedIn;
 
     if (kDebugMode) {
       debugPrint('[UserSession] Initialized. LoggedIn: $isLoggedIn');
@@ -117,6 +122,7 @@ class UserSession {
     if (_prefs != null) {
       await _prefs!.remove('session_isGuest');
     }
+    isAppActiveNotifier.value = isLoggedIn || isGuest;
   }
 
   Future<void> saveSession({
@@ -148,6 +154,7 @@ class UserSession {
       await _prefs!.remove('session_isGuest'); // Login clears guest mode
       _isGuestInMemory = false;
     }
+    isAppActiveNotifier.value = true;
   }
   
   Future<void> clearSession() async {
@@ -167,5 +174,6 @@ class UserSession {
       await _prefs!.remove('session_isGuest');
       _isGuestInMemory = false;
     }
+    isAppActiveNotifier.value = false;
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/api_client.dart';
+import '../services/user_session.dart';
 
 class DesktopWrapper extends StatefulWidget {
   final Widget child;
@@ -26,119 +27,121 @@ class _DesktopWrapperState extends State<DesktopWrapper> {
 
         // Mode Desktop (Tablette paysage ou PC)
         return Scaffold(
-          body: Container(
-            // Un dégradé très subtil et institutionnel en arrière-plan
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFF8FAFC), // Blanc cassé/Gris très clair
-                  Color(0xFFE2E8F0), // Gris légèrement plus sombre (slate)
-                ],
-              ),
-            ),
-            child: Row(
-              children: [
-                // Partie Gauche : Présentation (Vitrine)
-                // On n'affiche le texte que s'il y a VRAIMENT de la place (> 1000px)
-                if (constraints.maxWidth > 1000)
-                  Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 80.0, vertical: 60.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Titre accrocheur
-                          const Text(
-                            "Une application citoyenne\nqui rend la politique\nsimple et accessible.",
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              height: 1.1,
-                              color: Color(0xFF1E293B), // Bleu nuit très foncé
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Paragraphe descriptif
-                          const Text(
-                            "Suivez l'activité de vos députés, comprenez les lois en cours et participez au débat démocratique en temps réel depuis votre ordinateur ou votre smartphone.",
-                            style: TextStyle(
-                              fontSize: 18,
-                              height: 1.5,
-                              color: Color(0xFF475569), // Gris ardoise
-                            ),
-                          ),
-                          const SizedBox(height: 40),
-                          // Petits "Plus" (Badges ou texte)
-                          Wrap(
-                            spacing: 16,
-                            runSpacing: 16,
-                            children: [
-                              _buildFeatureBadge(Icons.verified, "Données officielles (AN)"),
-                              _buildFeatureBadge(Icons.how_to_vote, "Votes en temps réel"),
-                              _buildFeatureBadge(Icons.people, "Activité des députés"),
-                              _buildFeatureBadge(Icons.poll, "Sondages d'actualité"),
-                            ],
-                          ),
-                          const SizedBox(height: 60),
-                          // Bouton de transparence et sécurité
-                          OutlinedButton.icon(
-                            onPressed: _toggleTransparencyDialog,
-                            icon: const Icon(Icons.info_outline, size: 18),
-                            label: const Text("Sécurité & Source de données"),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF475569), // Gris ardoise
-                              side: const BorderSide(color: Color(0xFFCBD5E1)), // Bordure subtile
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+          body: ValueListenableBuilder<bool>(
+            valueListenable: UserSession().isAppActiveNotifier,
+            builder: (context, isAppActive, child) {
+              
+              bool hasSpaceForLeftPanel = constraints.maxWidth > 1000;
+              bool showLeftPanel = !isAppActive && hasSpaceForLeftPanel;
+              
+              // Double width when active
+              double targetPhoneWidth = isAppActive ? 840.0 : 420.0;
+              if (targetPhoneWidth > constraints.maxWidth - 40) {
+                targetPhoneWidth = constraints.maxWidth - 40;
+              }
 
-                // Partie Droite : L'application Mobile Démok
-                Expanded(
-                  flex: constraints.maxWidth > 1000 ? 5 : 10,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 40.0),
-                      child: Container(
-                        width: 420, // Largeur idéale d'un smartphone récent
-                        // Hauteur contrainte pour laisser de la marge en haut et en bas si possible
-                        height: constraints.maxHeight > 900 ? 850 : constraints.maxHeight - 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(40), // Bords très arrondis style iPhone
-                          border: Border.all(color: Colors.white.withOpacity(0.5), width: 8), // "Coque" blanche épaisse
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF007AFF).withOpacity(0.15), // Ombre portée légèrement bleue
-                              blurRadius: 40,
-                              spreadRadius: 5,
-                              offset: const Offset(0, 20),
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05), // Ombre plus dure pour le contour
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(32), // Bords arrondis de l'écran (à l'intérieur de la coque)
-                          child: widget.child, // L'application Démok 100% fonctionnelle
-                        ),
-                      ),
-                    ),
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFFF8FAFC), // Blanc cassé/Gris très clair
+                      Color(0xFFE2E8F0), // Gris légèrement plus sombre (slate)
+                    ],
                   ),
                 ),
-              ],
-            ),
+                child: Row(
+                  children: [
+                    // Partie Gauche : Présentation (Vitrine)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeInOutCubic,
+                      width: showLeftPanel ? constraints.maxWidth / 2 : 0,
+                      child: ClipRect(
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 350),
+                          opacity: showLeftPanel ? 1.0 : 0.0,
+                          child: SingleChildScrollView(
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: SizedBox(
+                              width: constraints.maxWidth / 2, // Garde la largeur fixe pendant l'animation pour éviter le reflow du texte
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 80.0, vertical: 60.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      "Une application citoyenne\nqui rend la politique\nsimple et accessible.",
+                                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, height: 1.1, color: Color(0xFF1E293B)),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    const Text(
+                                      "Suivez l'activité de vos députés, comprenez les lois en cours et votez sur les textes qui vous importent depuis votre ordinateur ou votre smartphone.",
+                                      style: TextStyle(fontSize: 18, height: 1.5, color: Color(0xFF475569)),
+                                    ),
+                                    const SizedBox(height: 40),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: [
+                                        _buildFeatureBadge(Icons.verified, "Données officielles (AN)"),
+                                        _buildFeatureBadge(Icons.how_to_vote, "Votes en temps réel"),
+                                        _buildFeatureBadge(Icons.people, "Activité des députés"),
+                                        _buildFeatureBadge(Icons.poll, "Sondages d'actualité"),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 60),
+                                    OutlinedButton.icon(
+                                      onPressed: _toggleTransparencyDialog,
+                                      icon: const Icon(Icons.info_outline, size: 18),
+                                      label: const Text("Sécurité & Source de données"),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF475569),
+                                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Partie Droite : L'application Mobile/Tablette Démok
+                    Expanded(
+                      child: Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeInOutCubic,
+                          width: targetPhoneWidth,
+                          height: constraints.maxHeight > 900 ? 850 : constraints.maxHeight - 80,
+                          margin: const EdgeInsets.symmetric(vertical: 40.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(40),
+                            border: Border.all(color: Colors.white.withOpacity(0.5), width: 8),
+                            boxShadow: [
+                              BoxShadow(color: const Color(0xFF007AFF).withOpacity(0.15), blurRadius: 40, spreadRadius: 5, offset: const Offset(0, 20)),
+                              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(32),
+                            child: widget.child,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         );
       },

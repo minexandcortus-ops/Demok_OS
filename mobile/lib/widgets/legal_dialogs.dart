@@ -15,20 +15,20 @@ class LegalDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Démok - Version 1.1 - Juin 2026\n\n',
+                  'Démok - Version 1.2 - Septembre 2026\n\n',
                   style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                 ),
                 _buildSection('1. Objet et Indépendance', 
-                  'Démok est une plateforme citoyenne d\'information et de débat. Elle est développée par une initiative indépendante et n\'est aucunement affiliée, approuvée ou liée au Gouvernement français, à l\'Assemblée nationale ou à toute institution publique.'),
+                  'Démok est une plateforme citoyenne d\'information et de vote consultatif sur la politique française. Elle est développée par une initiative indépendante et n\'est aucunement affiliée, approuvée ou liée au Gouvernement français, à l\'Assemblée nationale ou à toute institution publique.'),
                 _buildSection('2. Sources et Données', 
-                  'Les données législatives relatives aux textes de lois et amendements proviennent de l\'Open Data de l\'Assemblée nationale. Les données spécifiques aux députés (votes, statistiques parlementaires) ainsi que les résumés générés par IA sont fournis par le service tiers Clair (clair.vote). Bien que nous fassions de notre mieux pour assurer la fiabilité de ces informations, elles ont une valeur purement informative et ne remplacent pas les textes officiels consultables sur legifrance.gouv.fr.'),
+                  'Les données législatives relatives aux textes de lois et amendements proviennent de l\'Open Data de l\'Assemblée nationale. Les données spécifiques aux députés (votes, statistiques parlementaires) sont fournies par le service tiers Clair (clair.vote). Les résumés IA des textes de lois sont générés par l\'intelligence artificielle de Mistral AI. Bien que nous fassions de notre mieux pour assurer la fiabilité de ces informations, elles ont une valeur purement informative et ne remplacent pas les textes officiels consultables sur legifrance.gouv.fr.'),
                 _buildSection('3. Nature des Votes et Sondages', 
                   'Les votes exprimés sur Démok sont CONSULTATIFS et n\'ont aucune valeur légale, électorale ou contraignante. Ils servent à mesurer l\'opinion citoyenne au sein de la communauté Démok.'),
-                _buildSection('4. Règles de Participation et Débats', 
-                  'La participation aux débats nécessite un engagement minimal (300 XP). L\'utilisateur s\'engage à :\n'
-                  '• Respecter les autres citoyens et leurs opinions.\n'
-                  '• Ne pas publier de contenus haineux, racistes, sexistes ou incitant à la violence.\n'
-                  '• Tout manquement peut entraîner une suppression du contenu et un bannissement définitif du compte.'),
+                _buildSection('4. Règles d\'Utilisation et Interpellation', 
+                  'L\'accès à certaines fonctionnalités avancées, comme l\'interpellation directe d\'un député par email, nécessite un engagement citoyen minimal mesuré par le niveau d\'expérience (XP). L\'utilisateur s\'engage à :\n'
+                  '• Faire preuve de respect et de courtoisie lors de toute prise de contact avec les élus.\n'
+                  '• Ne pas utiliser l\'application pour harceler ou envoyer des messages haineux.\n'
+                  '• Tout manquement grave peut entraîner un bannissement définitif du compte.'),
                 _buildSection('5. Inscription et Accès', 
                   'L\'inscription est réservée aux personnes de 18 ans et plus. L\'utilisateur est responsable de la sécurité de son mot de passe et de son compte.'),
                 _buildSection('6. Responsabilité', 
@@ -61,7 +61,7 @@ class LegalDialogs {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Démok - Version 1.1 - Juin 2026\n\n',
+                  'Démok - Version 1.2 - Septembre 2026\n\n',
                   style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
                 ),
                 _buildSection('1. Données Collectées (RGPD)', 
@@ -70,7 +70,7 @@ class LegalDialogs {
                   '• Année de naissance (vérification de la majorité)\n'
                   '• Code postal (affectation à votre circonscription et votre député)\n'
                   '• Email (sécurisation OTP, notifications et connexion)\n'
-                  '• Votes, Opinions et XP (statistiques de participation).'),
+                  '• Votes et XP (statistiques de participation).'),
                 _buildSection('2. Confidentialité et Secret des Votes (Urne Anonyme)', 
                   'Le secret du vote est le pilier de Démok. Nous utilisons un système technique de "Double Registre" :\n'
                   '• Vos données d\'identité (pseudo, email) sont stockées séparément de vos choix de vote.\n'
