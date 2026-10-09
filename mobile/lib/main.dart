@@ -34,7 +34,7 @@ class DemokApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Démok',
+      title: 'Démok | Application citoyenne et démocratie participative',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey, // Branché pour la gestion 401
       builder: (context, child) => DesktopWrapper(child: child!),
