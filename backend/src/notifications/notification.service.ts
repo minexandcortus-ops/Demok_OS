@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 import { VoteRegistry } from '../votes/vote-registry.entity';
 import { User } from '../users/user.entity';
-import { Law } from '../laws/law.entity';
+import { Law, LawStatus } from '../laws/law.entity';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -204,19 +204,10 @@ export class NotificationService {
 
             if (count === 1) {
                 const law = votedLaws[0];
-                hash = `law_${law.id}`;
-                const stats = law.deputyVoteResult;
-                const adopted = stats?.adopted ?? false;
-                
-                title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
-                body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}".`;
-                
-                if (stats && (stats.pour > 0 || stats.contre > 0)) {
-                    const total = stats.pour + stats.contre;
-                    const pourPercent = Math.round((stats.pour / total) * 100);
-                    const contrePercent = Math.round((stats.contre / total) * 100);
-                    body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
-                }
+                const content = this.buildLawResultContent(law);
+                hash = `law_${law.id}_${content.kind}`;
+                title = content.title;
+                body = content.body;
                 notifData = { type: 'LAW_VOTED', lawId: law.id };
             } else {
                 hash = `group_${count}`;
@@ -251,6 +242,47 @@ export class NotificationService {
     }
 
     /**
+     * Construit le titre/corps d'une notification de résultat de loi.
+     * Le statut de la loi (source de vérité affichée dans la webapp) prime sur
+     * deputyVoteResult, qui peut être absent (adoption sans scrutin public, promulgation).
+     */
+    private buildLawResultContent(law: Law): { kind: string; title: string; body: string } {
+        const name = law.titleVulgarized || law.titleOfficial;
+        const stats = law.deputyVoteResult;
+
+        if (law.status === LawStatus.VALIDATED) {
+            const d = law.datePromulgation ? new Date(law.datePromulgation) : null;
+            const dateStr = d ? ` le ${d.toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' })}` : '';
+            return {
+                kind: 'promulgated',
+                title: '📜 Loi promulguée !',
+                body: `La loi "${name}" a été promulguée${dateStr}.`,
+            };
+        }
+
+        let adopted: boolean;
+        if (law.status === LawStatus.REJECTED) adopted = false;
+        else if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.AT_SENATE) adopted = true;
+        else adopted = stats?.adopted ?? true;
+
+        let body = adopted
+            ? `L'Assemblée a adopté la loi "${name}".`
+            : `L'Assemblée a rejeté la loi "${name}".`;
+        if (stats && (stats.pour > 0 || stats.contre > 0)) {
+            const total = stats.pour + stats.contre;
+            const pourPercent = Math.round((stats.pour / total) * 100);
+            const contrePercent = Math.round((stats.contre / total) * 100);
+            body = body.replace(/\.$/, ` (Pour : ${pourPercent}%, Contre : ${contrePercent}%).`);
+        }
+
+        return {
+            kind: adopted ? 'adopted' : 'rejected',
+            title: adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !',
+            body,
+        };
+    }
+
+    /**
      * Envoi immédiat ciblé (utilisé par le bouton Admin)
      */
     async sendTargetedLawNotification(lawId: string): Promise<void> {
@@ -277,18 +309,7 @@ export class NotificationService {
             return;
         }
 
-        const stats = law.deputyVoteResult;
-        const adopted = stats?.adopted ?? false;
-        
-        const title = adopted ? '🏛️ Loi adoptée !' : '🏛️ Loi rejetée !';
-        let body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}".`;
-        
-        if (stats && (stats.pour > 0 || stats.contre > 0)) {
-            const total = stats.pour + stats.contre;
-            const pourPercent = Math.round((stats.pour / total) * 100);
-            const contrePercent = Math.round((stats.contre / total) * 100);
-            body = `L'Assemblée a voté la loi "${law.titleVulgarized || law.titleOfficial}" (Pour: ${pourPercent}%, Contre: ${contrePercent}%).`;
-        }
+        const { title, body } = this.buildLawResultContent(law);
 
         // Chunk by 500 and queue
         const chunkSize = 500;
