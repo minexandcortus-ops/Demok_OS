@@ -4,3 +4,4 @@ demok.votre-domaine.com {
         output file /data/access.log
     }
 }
+

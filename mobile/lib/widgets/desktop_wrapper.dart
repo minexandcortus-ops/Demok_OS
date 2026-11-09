@@ -205,7 +205,7 @@ class _DesktopWrapperState extends State<DesktopWrapper> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDialogItem(Icons.dns, "Hébergement Local", description: "Serveurs souverains hébergés en France (Data Center de Paris)."),
+                _buildDialogItem(Icons.dns, "Hébergement Local", description: "Serveurs souverains hébergés en France (Data Center de Marseille)."),
                 const SizedBox(height: 20),
                 _buildDialogItem(Icons.auto_awesome, "Intelligence Artificielle", description: "Modèles européens (Mistral AI) utilisés pour générer des résumés neutres des textes de loi."),
                 const SizedBox(height: 20),

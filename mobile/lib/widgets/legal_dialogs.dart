@@ -82,7 +82,7 @@ class LegalDialogs {
                   '• Afficher les tendances politiques globales.\n'
                   '• Vous permettre d\'interpeller votre député directement.'),
                 _buildSection('4. Sécurité et Hébergement', 
-                  'Vos données sont hébergées au sein de l\'Union Européenne (Scaleway / Firebase) et protégées par des protocoles de sécurité standards.'),
+                  'Vos données sont hébergées au sein de l\'Union Européenne (PulseHeberg / Firebase) et protégées par des protocoles de sécurité standards.'),
                 _buildSection('5. Vos Droits d’Accès et d’Oubli', 
                   'Vous pouvez à tout moment :\n'
                   '• Modifier votre email ou circonscription dans le profil.\n'
