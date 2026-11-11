@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Queue } from 'bull';
 import { VoteRegistry } from '../votes/vote-registry.entity';
 import { User } from '../users/user.entity';
+import { Citizen } from '../users/citizen.entity';
 import { Law, LawStatus } from '../laws/law.entity';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
@@ -21,6 +22,9 @@ export class NotificationService {
 
         @InjectRepository(User)
         private userRepository: Repository<User>,
+
+        @InjectRepository(Citizen)
+        private citizenRepository: Repository<Citizen>,
 
         @InjectRepository(Law)
         private lawRepository: Repository<Law>,
@@ -328,6 +332,11 @@ export class NotificationService {
 
     /**
      * Envoie une notification aux utilisateurs abonnés pour les lois prévues au vote demain (J-1).
+     * Règle stricte :
+     * - Rappel uniquement à ceux qui n'ont pas encore voté.
+     * - Si 1 seule loi non votée : notification personnalisée citant le titre de la loi.
+     * - Si plusieurs lois non votées : notification générique indiquant le nombre de lois restantes à voter.
+     * - Si le citoyen a déjà voté sur toutes les lois de demain : aucune notification envoyée.
      * Exécuté chaque matin (à 8h30 par le cron).
      */
     async processUpcomingLawsNotifications(force = false): Promise<void> {
@@ -370,51 +379,99 @@ export class NotificationService {
         }
 
         this.logger.log(`📢 ${upcomingLaws.length} loi(s) prévue(s) au vote demain (${tomorrowStr}).`);
+        const upcomingLawIds = upcomingLaws.map(l => l.id);
 
-        const users = await this.userRepository.find({
-            where: { notifyUpcomingLaws: true },
-        });
+        // Récupérer tous les citoyens abonnés et ayant un token FCM actif
+        const citizens = await this.citizenRepository
+            .createQueryBuilder('citizen')
+            .innerJoinAndSelect('citizen.user', 'user')
+            .where('user.notifyUpcomingLaws = :val', { val: true })
+            .andWhere('user.fcmToken IS NOT NULL')
+            .getMany();
 
-        const tokens = users
-            .map(u => u.fcmToken)
-            .filter((t): t is string => !!t);
-
-        if (tokens.length === 0) {
+        if (citizens.length === 0) {
             this.logger.log('ℹ️ Aucun utilisateur abonné avec token FCM.');
             return;
         }
 
-        let title = '';
-        let body = '';
-        let notifData: any = {};
+        // Récupérer les votes déjà émis pour ces lois afin de ne notifier que les citoyens qui n'ont pas encore voté
+        const existingVotes = await this.voteRegistryRepository
+            .createQueryBuilder('vote')
+            .leftJoinAndSelect('vote.citizen', 'citizen')
+            .leftJoinAndSelect('vote.law', 'law')
+            .where('law.id IN (:...upcomingLawIds)', { upcomingLawIds })
+            .getMany();
 
-        if (upcomingLaws.length === 1) {
-            const law = upcomingLaws[0];
-            const name = law.titleVulgarized || law.titleOfficial;
-            title = '🏛️ Vote demain à l\'Assemblée !';
-            body = `La loi "${name}" sera soumise au vote demain. Donnez votre avis citoyen !`;
-            notifData = { type: 'LAW_UPCOMING', lawId: law.id };
-        } else {
-            const count = upcomingLaws.length;
-            title = '🏛️ Votes prévus demain !';
-            body = `${count} lois seront soumises au vote demain à l'Assemblée. Donnez votre avis citoyen !`;
-            notifData = { type: 'LAW_GROUP' };
+        const citizenVotedMap = new Map<string, Set<string>>();
+        for (const v of existingVotes) {
+            const cId = v.citizen?.id;
+            const lId = v.law?.id;
+            if (!cId || !lId) continue;
+            if (!citizenVotedMap.has(cId)) {
+                citizenVotedMap.set(cId, new Set());
+            }
+            citizenVotedMap.get(cId)!.add(lId);
         }
 
-        const chunkSize = 500;
+        // Grouper les tokens par payload (multicast performant)
+        const multicastGroups = new Map<string, { title: string, body: string, data: any, tokens: string[] }>();
+
+        for (const citizen of citizens) {
+            const token = citizen.user?.fcmToken;
+            if (!token) continue;
+
+            const votedSet = citizenVotedMap.get(citizen.id) || new Set();
+            const unvotedLaws = upcomingLaws.filter(l => !votedSet.has(l.id));
+
+            // Si le citoyen a déjà voté sur toutes les lois de demain : 0 notification
+            if (unvotedLaws.length === 0) {
+                continue;
+            }
+
+            let hash = '';
+            let title = '';
+            let body = '';
+            let notifData: any = {};
+
+            if (unvotedLaws.length === 1) {
+                // Exactement 1 loi restante à voter : notification nominative
+                const law = unvotedLaws[0];
+                const name = law.titleVulgarized || law.titleOfficial;
+                hash = `law_${law.id}`;
+                title = '🏛️ Vote demain à l\'Assemblée !';
+                body = `La loi "${name}" sera votée demain. Donnez votre avis citoyen !`;
+                notifData = { type: 'LAW_UPCOMING', lawId: law.id };
+            } else {
+                // Plusieurs lois restantes : notification générique
+                const count = unvotedLaws.length;
+                hash = `group_${count}`;
+                title = '🏛️ Votes prévus demain !';
+                body = `${count} lois que vous n'avez pas encore votées sont au programme demain. Donnez votre avis citoyen !`;
+                notifData = { type: 'LAW_GROUP' };
+            }
+
+            if (!multicastGroups.has(hash)) {
+                multicastGroups.set(hash, { title, body, data: notifData, tokens: [] });
+            }
+            multicastGroups.get(hash)!.tokens.push(token);
+        }
+
         let totalSent = 0;
-        for (let i = 0; i < tokens.length; i += chunkSize) {
-            const chunkTokens = tokens.slice(i, i + chunkSize);
-            await this.notificationQueue.add('multicast-push', {
-                tokens: chunkTokens,
-                title,
-                body,
-                data: notifData,
-            });
-            totalSent += chunkTokens.length;
+        const chunkSize = 500;
+        for (const group of multicastGroups.values()) {
+            for (let i = 0; i < group.tokens.length; i += chunkSize) {
+                const chunkTokens = group.tokens.slice(i, i + chunkSize);
+                await this.notificationQueue.add('multicast-push', {
+                    tokens: chunkTokens,
+                    title: group.title,
+                    body: group.body,
+                    data: group.data,
+                });
+                totalSent += chunkTokens.length;
+            }
         }
 
         await redis.set(redisKey, 'sent', 'EX', 36 * 3600); // Expiration 36h
-        this.logger.log(`✅ ${totalSent} notification(s) envoyée(s) pour le rappel des votes de demain.`);
+        this.logger.log(`✅ ${totalSent} rappel(s) de lois à venir (J-1) programmé(s).`);
     }
 }

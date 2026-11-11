@@ -4,13 +4,14 @@ import { BullModule } from '@nestjs/bull';
 import { VoteRegistry } from '../votes/vote-registry.entity';
 import { User } from '../users/user.entity';
 import { Law } from '../laws/law.entity';
+import { Citizen } from '../users/citizen.entity';
 import { NotificationService } from './notification.service';
 import { NotificationProcessor } from './notification.processor';
 import { MailModule } from './mail/mail.module';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([VoteRegistry, User, Law]),
+        TypeOrmModule.forFeature([VoteRegistry, User, Law, Citizen]),
         MailModule,
 
         // Queue Bull pour notifications
