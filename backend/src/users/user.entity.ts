@@ -39,6 +39,9 @@ export class User {
     notifyLawResults: boolean;
 
     @Column({ default: true })
+    notifyUpcomingLaws: boolean;
+
+    @Column({ default: true })
     notifySurveyResults: boolean;
 
     @Column({ default: true })

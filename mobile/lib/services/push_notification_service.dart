@@ -135,10 +135,10 @@ class PushNotificationService {
     void tryNavigate() {
       if (navigatorKey.currentState != null) {
         final type = data['type'] as String?;
-        if (type == 'NEW_SURVEY' || type == 'SURVEY_CLOSED') {
-          navigatorKey.currentState!.pushNamed('/surveys');
-        } else if (type == 'LAW_MODIFIED' && data['lawId'] != null) {
+        if ((type == 'LAW_MODIFIED' || type == 'LAW_VOTED' || type == 'LAW_UPCOMING') && data['lawId'] != null) {
           navigatorKey.currentState!.pushNamed('/laws/${data['lawId']}');
+        } else if (type == 'LAW_GROUP') {
+          navigatorKey.currentState!.pushNamed('/');
         }
       } else if (retries > 0) {
         retries--;

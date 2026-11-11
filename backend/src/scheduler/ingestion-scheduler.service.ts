@@ -38,6 +38,20 @@ export class IngestionSchedulerService {
     }
 
     /**
+     * Cron job : Tous les matins à 8h30 (heure de Paris)
+     * Envoie la notification de rappel pour les lois soumises au vote le lendemain (J-1)
+     */
+    @Cron('30 8 * * *', { timeZone: 'Europe/Paris' })
+    async handleUpcomingLawsNotification() {
+        this.logger.log('⏰ Déclenchement du cron de 8h30 : Rappel lois votées demain (J-1)');
+        try {
+            await this.notificationService.processUpcomingLawsNotifications();
+        } catch (error) {
+            this.logger.error('❌ Erreur lors du rappel des lois prévues demain', error.stack);
+        }
+    }
+
+    /**
      * Cron job optimisé : Tous les jours à 3h du matin
      * 1. Synchronise les 21 lois à l'ordre du jour (HTML scraping)
      * 2. Résout les lois dont la date est passée (votes des députés)

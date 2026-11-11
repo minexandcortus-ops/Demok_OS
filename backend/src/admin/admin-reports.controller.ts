@@ -235,4 +235,17 @@ export class AdminLawsController {
             message: 'Notification envoyée aux utilisateurs ayant voté.',
         };
     }
+
+    /**
+     * POST /admin/laws/notify-upcoming
+     * Déclenche manuellement l'envoi des notifications de rappel pour les lois de demain (J-1)
+     */
+    @Post('notify-upcoming')
+    async notifyUpcomingLaws() {
+        await this.notificationService.processUpcomingLawsNotifications(true);
+        return {
+            success: true,
+            message: 'Notifications des lois prévues au vote demain (J-1) déclenchées.',
+        };
+    }
 }

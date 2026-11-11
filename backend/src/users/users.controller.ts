@@ -68,8 +68,7 @@ export class UsersController {
             constituency: constituencyData,
             email: email,
             notifyLawResults: citizen.user?.notifyLawResults ?? true,
-            notifySurveyResults: citizen.user?.notifySurveyResults ?? true,
-            notifyNewSurveys: citizen.user?.notifyNewSurveys ?? true,
+            notifyUpcomingLaws: citizen.user?.notifyUpcomingLaws ?? true,
         };
 
         // Inject available constituencies if we have a postal code
@@ -103,6 +102,7 @@ export class UsersController {
             postalCode?: string; 
             constituencyCode?: string;
             notifyLawResults?: boolean;
+            notifyUpcomingLaws?: boolean;
             notifySurveyResults?: boolean;
             notifyNewSurveys?: boolean;
         }
@@ -132,6 +132,10 @@ export class UsersController {
         let userNeedsSave = false;
         if (updateData.notifyLawResults !== undefined) {
             citizen.user.notifyLawResults = updateData.notifyLawResults;
+            userNeedsSave = true;
+        }
+        if (updateData.notifyUpcomingLaws !== undefined) {
+            citizen.user.notifyUpcomingLaws = updateData.notifyUpcomingLaws;
             userNeedsSave = true;
         }
         if (updateData.notifySurveyResults !== undefined) {

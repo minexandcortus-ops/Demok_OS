@@ -327,27 +327,94 @@ export class NotificationService {
     }
 
     /**
-     * Envoie une notification de nouveau sondage à tous les utilisateurs abonnés.
+     * Envoie une notification aux utilisateurs abonnés pour les lois prévues au vote demain (J-1).
+     * Exécuté chaque matin (à 8h30 par le cron).
      */
-    async notifyNewSurvey(pollId: string, question: string): Promise<void> {
-        this.logger.log(`📢 Notification nouveau sondage : ${question}`);
-        try {
-            await this.notificationQueue.add('new-survey', { pollId, question });
-        } catch (error) {
-            this.logger.error(`❌ Erreur ajout notification "new-survey" : ${error.message}`);
-        }
-    }
+    async processUpcomingLawsNotifications(force = false): Promise<void> {
+        this.logger.log('📢 Vérification des lois prévues au vote demain (J-1)...');
 
-    /**
-     * Envoie une notification de sondage clôturé aux participants.
-     */
-    async notifySurveyClosed(pollId: string, question: string, voterIds: string[]): Promise<void> {
-        this.logger.log(`📢 Notification sondage clôturé : ${question}`);
-        if (!voterIds || voterIds.length === 0) return;
-        try {
-            await this.notificationQueue.add('survey-closed', { pollId, question, voterIds });
-        } catch (error) {
-            this.logger.error(`❌ Erreur ajout notification "survey-closed" : ${error.message}`);
+        // Calcul des bornes de demain dans le fuseau Europe/Paris
+        const now = new Date();
+        const formatter = new Intl.DateTimeFormat('fr-CA', { timeZone: 'Europe/Paris' });
+        const todayParisStr = formatter.format(now); // e.g. "2026-11-11"
+        
+        const todayParis = new Date(`${todayParisStr}T00:00:00.000Z`);
+        const tomorrowStart = new Date(todayParis.getTime() + 24 * 60 * 60 * 1000);
+        const tomorrowEnd = new Date(todayParis.getTime() + 48 * 60 * 60 * 1000 - 1);
+        const tomorrowStr = tomorrowStart.toISOString().split('T')[0];
+
+        const redis = this.notificationQueue.client;
+        const redisKey = `upcoming_laws_notified_${tomorrowStr}`;
+
+        if (!force) {
+            const alreadySent = await redis.get(redisKey);
+            if (alreadySent) {
+                this.logger.log(`ℹ️ Notifications pour les lois de demain (${tomorrowStr}) déjà envoyées.`);
+                return;
+            }
         }
+
+        // Recherche des lois non encore résolues dont la date d'agenda/vote est demain
+        const upcomingLaws = await this.lawRepository
+            .createQueryBuilder('law')
+            .where('law.status IN (:...statuses)', { statuses: [LawStatus.UPCOMING, LawStatus.PENDING] })
+            .andWhere(
+                'COALESCE(law.agendaDate, law.voteDate) >= :start AND COALESCE(law.agendaDate, law.voteDate) <= :end',
+                { start: tomorrowStart, end: tomorrowEnd }
+            )
+            .getMany();
+
+        if (upcomingLaws.length === 0) {
+            this.logger.log(`ℹ️ Aucune loi prévue au vote pour demain (${tomorrowStr}).`);
+            return;
+        }
+
+        this.logger.log(`📢 ${upcomingLaws.length} loi(s) prévue(s) au vote demain (${tomorrowStr}).`);
+
+        const users = await this.userRepository.find({
+            where: { notifyUpcomingLaws: true },
+        });
+
+        const tokens = users
+            .map(u => u.fcmToken)
+            .filter((t): t is string => !!t);
+
+        if (tokens.length === 0) {
+            this.logger.log('ℹ️ Aucun utilisateur abonné avec token FCM.');
+            return;
+        }
+
+        let title = '';
+        let body = '';
+        let notifData: any = {};
+
+        if (upcomingLaws.length === 1) {
+            const law = upcomingLaws[0];
+            const name = law.titleVulgarized || law.titleOfficial;
+            title = '🏛️ Vote demain à l\'Assemblée !';
+            body = `La loi "${name}" sera soumise au vote demain. Donnez votre avis citoyen !`;
+            notifData = { type: 'LAW_UPCOMING', lawId: law.id };
+        } else {
+            const count = upcomingLaws.length;
+            title = '🏛️ Votes prévus demain !';
+            body = `${count} lois seront soumises au vote demain à l'Assemblée. Donnez votre avis citoyen !`;
+            notifData = { type: 'LAW_GROUP' };
+        }
+
+        const chunkSize = 500;
+        let totalSent = 0;
+        for (let i = 0; i < tokens.length; i += chunkSize) {
+            const chunkTokens = tokens.slice(i, i + chunkSize);
+            await this.notificationQueue.add('multicast-push', {
+                tokens: chunkTokens,
+                title,
+                body,
+                data: notifData,
+            });
+            totalSent += chunkTokens.length;
+        }
+
+        await redis.set(redisKey, 'sent', 'EX', 36 * 3600); // Expiration 36h
+        this.logger.log(`✅ ${totalSent} notification(s) envoyée(s) pour le rappel des votes de demain.`);
     }
 }

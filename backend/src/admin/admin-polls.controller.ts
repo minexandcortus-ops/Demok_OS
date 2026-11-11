@@ -71,9 +71,6 @@ export class AdminPollsController {
 
         const voterIds = [...new Set([...legacyVoterIds, ...newVoterIds])];
 
-        // Centralisation via NotificationService (au lieu d'injecter la queue directement)
-        await this.notificationService.notifySurveyClosed(poll.id, poll.question, voterIds);
-
         return {
             success: true,
             message: `Sondage "${poll.question}" clôturé.`,
@@ -141,9 +138,6 @@ export class AdminPollsController {
         });
 
         await this.pollRepository.save(poll);
-
-        // Centralisation via NotificationService
-        await this.notificationService.notifyNewSurvey(poll.id, poll.question);
 
         return {
             success: true,
