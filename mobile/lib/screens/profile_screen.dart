@@ -608,11 +608,16 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[200]!),
       ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const Border(),
+          collapsedShape: const Border(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          iconColor: AppColors.primaryBlue,
+          collapsedIconColor: AppColors.primaryBlue,
+          initiallyExpanded: false,
+          title: Row(
             children: [
               Icon(
                 _isStreetMode ? Icons.local_fire_department : Icons.record_voice_over,
@@ -630,42 +635,47 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Choisissez le style de vulgarisation affiché par défaut sur les lois.',
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildToneChoiceCard(
-                  title: '🏛️ Classique',
-                  subtitle: 'Neutre et synthétique',
-                  isSelected: !_isStreetMode,
-                  activeColor: AppColors.primaryBlue,
-                  onTap: () async {
-                    await UserSession().setStreetModePreferred(false);
-                    if (mounted) setState(() => _isStreetMode = false);
-                  },
-                ),
+          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Choisissez le style de vulgarisation affiché par défaut sur les lois.',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildToneChoiceCard(
-                  title: '🔥 Mode Rue',
-                  subtitle: 'Argot urbain percutant',
-                  isSelected: _isStreetMode,
-                  activeColor: const Color(0xFFEA580C),
-                  onTap: () async {
-                    await UserSession().setStreetModePreferred(true);
-                    if (mounted) setState(() => _isStreetMode = true);
-                  },
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildToneChoiceCard(
+                    title: '🏛️ Classique',
+                    subtitle: 'Neutre et synthétique',
+                    isSelected: !_isStreetMode,
+                    activeColor: AppColors.primaryBlue,
+                    onTap: () async {
+                      await UserSession().setStreetModePreferred(false);
+                      if (mounted) setState(() => _isStreetMode = false);
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildToneChoiceCard(
+                    title: '🔥 Mode Rue',
+                    subtitle: 'Argot urbain percutant',
+                    isSelected: _isStreetMode,
+                    activeColor: const Color(0xFFEA580C),
+                    onTap: () async {
+                      await UserSession().setStreetModePreferred(true);
+                      if (mounted) setState(() => _isStreetMode = true);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

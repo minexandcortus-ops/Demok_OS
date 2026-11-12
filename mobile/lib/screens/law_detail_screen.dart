@@ -386,13 +386,10 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                         _buildLegislativeTimeline(),
                         const SizedBox(height: 16),
 
-
-                        const SizedBox(height: 16),
-                        
                         // Vote results (TOP priority if voted)
                         if (_hasVoted && _voteResult != null) ...[
                           _buildVoteResults(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
                         ],
 
                         // Résumé Démok (Classique / Mode Rue)
@@ -704,130 +701,158 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
     final stats = _voteResult?['statistics'];
     if (stats == null) return const SizedBox.shrink();
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.backgroundSecondary,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Résultats communauté',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
-          const SizedBox(height: 24),
-          
-          // Horizontal Bars Layout
-          Column(
+        ],
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          shape: const Border(),
+          collapsedShape: const Border(),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+          iconColor: AppColors.primaryBlue,
+          collapsedIconColor: AppColors.primaryBlue,
+          initiallyExpanded: false,
+          title: Row(
             children: [
-              _buildHorizontalBar('Pour', stats['forPercentage'], AppColors.votePour),
-              _buildHorizontalBar('Neutre', stats['abstainPercentage'], AppColors.voteAbstention),
-              _buildHorizontalBar('Contre', stats['againstPercentage'], AppColors.voteContre),
+              const Icon(Icons.poll_outlined, color: AppColors.primaryBlue, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Résultats communauté',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkBlue,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
-          
-          const SizedBox(height: 24),
-          Center(
-            child: Text(
-              '${stats['totalVotes']} votes au total',
-              style: const TextStyle(color: AppColors.textSecondary),
-            ),
-          ),
-          
-          // User vote display
-          if (widget.law.userVote != null)
-            Builder(builder: (context) {
-              String label;
-              Color bgCol;
-              Color textCol;
-              IconData icon;
-
-              if (widget.law.userVote == 'FOR') {
-                label = 'Vous avez voté pour';
-                bgCol = AppColors.votePour.withValues(alpha: 0.15);
-                textCol = AppColors.votePour;
-                icon = Icons.thumb_up_rounded;
-              } else if (widget.law.userVote == 'AGAINST') {
-                label = 'Vous avez voté contre';
-                bgCol = AppColors.voteContre.withValues(alpha: 0.15);
-                textCol = AppColors.voteContre;
-                icon = Icons.thumb_down_rounded;
-              } else {
-                label = 'Vous avez voté neutre';
-                bgCol = AppColors.voteAbstention.withValues(alpha: 0.15);
-                textCol = AppColors.voteAbstention;
-                icon = Icons.remove_circle_outline_rounded;
-              }
-
-              return Container(
-                margin: const EdgeInsets.only(top: 24),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: bgCol,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: textCol.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, size: 20, color: textCol),
-                    const SizedBox(width: 8),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: textCol,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          
-          // Deputy comparison
-          if (_voteResult!['deputyVote'] != null) ...[
-            const SizedBox(height: 16),
-            const Divider(),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          children: [
             const SizedBox(height: 8),
-            Text(
-              _voteResult!['deputyVote']['agreement']
-                  ? '✅ Ton député ${_voteResult!['deputyVote']['deputyName']} a voté comme toi'
-                  : '⚠️ Ton député ${_voteResult!['deputyVote']['deputyName']} a voté différemment',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: _voteResult!['deputyVote']['agreement'] ? Colors.green : Colors.orange,
+            // Horizontal Bars Layout
+            Column(
+              children: [
+                _buildHorizontalBar('Pour', stats['forPercentage'], AppColors.votePour),
+                _buildHorizontalBar('Neutre', stats['abstainPercentage'], AppColors.voteAbstention),
+                _buildHorizontalBar('Contre', stats['againstPercentage'], AppColors.voteContre),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+            Center(
+              child: Text(
+                '${stats['totalVotes']} votes au total',
+                style: const TextStyle(color: AppColors.textSecondary),
               ),
             ),
-          ],
-          
-          // Modify vote button (only for votable laws: UPCOMING or PENDING)
-          if (widget.law.isVotable && !_isModifyingVote) ...[ 
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _isModifyingVote = true;
-                  });
-                },
-                icon: const Icon(Icons.edit, size: 18),
-                label: const Text('Modifier mon vote'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primaryBlue,
-                  side: const BorderSide(color: AppColors.primaryBlue),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+            
+            // User vote display
+            if (widget.law.userVote != null)
+              Builder(builder: (context) {
+                String label;
+                Color bgCol;
+                Color textCol;
+                IconData icon;
+
+                if (widget.law.userVote == 'FOR') {
+                  label = 'Vous avez voté pour';
+                  bgCol = AppColors.votePour.withValues(alpha: 0.15);
+                  textCol = AppColors.votePour;
+                  icon = Icons.thumb_up_rounded;
+                } else if (widget.law.userVote == 'AGAINST') {
+                  label = 'Vous avez voté contre';
+                  bgCol = AppColors.voteContre.withValues(alpha: 0.15);
+                  textCol = AppColors.voteContre;
+                  icon = Icons.thumb_down_rounded;
+                } else {
+                  label = 'Vous avez voté neutre';
+                  bgCol = AppColors.voteAbstention.withValues(alpha: 0.15);
+                  textCol = AppColors.voteAbstention;
+                  icon = Icons.remove_circle_outline_rounded;
+                }
+
+                return Container(
+                  margin: const EdgeInsets.only(top: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: bgCol,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: textCol.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 20, color: textCol),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: textCol,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            
+            // Deputy comparison
+            if (_voteResult!['deputyVote'] != null) ...[
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                _voteResult!['deputyVote']['agreement']
+                    ? '✅ Ton député ${_voteResult!['deputyVote']['deputyName']} a voté comme toi'
+                    : '⚠️ Ton député ${_voteResult!['deputyVote']['deputyName']} a voté différemment',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _voteResult!['deputyVote']['agreement'] ? Colors.green : Colors.orange,
+                ),
+              ),
+            ],
+            
+            // Modify vote button (only for votable laws: UPCOMING or PENDING)
+            if (widget.law.isVotable && !_isModifyingVote) ...[ 
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _isModifyingVote = true;
+                    });
+                  },
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('Modifier mon vote'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primaryBlue,
+                    side: const BorderSide(color: AppColors.primaryBlue),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
