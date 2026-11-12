@@ -3,6 +3,6 @@ class Env {
   /// Par défaut, pointe vers l'environnement local pour les tests.
   static const String apiUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://192.168.0.103:3000/api',
+    defaultValue: 'http://localhost:3000/api',
   );
 }
