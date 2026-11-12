@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/citizen_level.dart';
 import '../models/citizen_progress.dart';
 import '../services/gamification_service.dart';
-import '../services/user_session.dart';
 import '../widgets/citizen_badge.dart';
 import '../widgets/xp_progress_bar.dart';
 import '../theme/app_colors.dart';

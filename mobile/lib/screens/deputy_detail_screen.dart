@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/deputy.dart';
 import '../services/deputies_service.dart';
-import '../services/deputies_service.dart';
 import '../theme/app_colors.dart';
 import '../config/env.dart';
 

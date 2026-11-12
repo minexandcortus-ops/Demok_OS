@@ -13,8 +13,6 @@ import 'profile_screen.dart';
 import 'landing_screen.dart';
 import 'surveys_screen.dart';
 import 'deputy_list_screen.dart';
-import '../widgets/survey_card.dart';
-import '../widgets/topic_poll_card.dart';
 import '../services/api_client.dart';
 import '../services/pwa_install_service.dart';
 import '../widgets/android_install_banner.dart';

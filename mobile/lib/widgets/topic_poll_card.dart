@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../services/user_session.dart';
 import '../services/api_client.dart';
 import '../theme/app_colors.dart';
 
