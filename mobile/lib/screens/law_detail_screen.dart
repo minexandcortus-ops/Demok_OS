@@ -489,6 +489,12 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (hasStreet) ...[
+            Center(
+              child: _buildModeTogglePill(),
+            ),
+            const SizedBox(height: 14),
+          ],
           Row(
             children: [
               Icon(
@@ -507,7 +513,6 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                   ),
                 ),
               ),
-              if (hasStreet) _buildModeTogglePill(),
             ],
           ),
           const SizedBox(height: 12),
@@ -636,10 +641,17 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(3),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -668,18 +680,18 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           title,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             color: isSelected ? Colors.white : Colors.grey[700],
           ),
