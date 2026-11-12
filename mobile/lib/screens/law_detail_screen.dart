@@ -567,7 +567,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  isStreetActive ? 'Généré par Mistral IA (Mode Rue 🔥)' : 'Généré par Mistral IA',
+                  'Généré par Mistral AI',
                   style: const TextStyle(
                     fontStyle: FontStyle.italic,
                     color: Colors.grey,
