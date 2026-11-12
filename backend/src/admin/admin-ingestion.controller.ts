@@ -150,6 +150,26 @@ export class AdminIngestionController {
     }
 
     /**
+     * POST /admin/ingestion/diversify-street-intros
+     * Diversifie les intros Mode Rue ("En gros", "Pour la faire courte", etc.)
+     */
+    @Post('diversify-street-intros')
+    async diversifyStreetIntros() {
+        this.logger.log('🎨 Déclenchement de la diversification des accroches Mode Rue');
+        try {
+            const result = await this.summaryUpdaterService.diversifyStreetIntros();
+            return {
+                success: true,
+                ...result,
+                timestamp: new Date().toISOString(),
+            };
+        } catch (error) {
+            this.logger.error('Erreur lors de la diversification des accroches Mode Rue', error);
+            return { success: false, message: error.message, timestamp: new Date().toISOString() };
+        }
+    }
+
+    /**
      * POST /admin/ingestion/amendements/sync
      * Déclenche manuellement la re-sync des amendements pour toutes les lois à l'agenda
      */

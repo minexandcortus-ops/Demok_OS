@@ -81,7 +81,7 @@ Ta tâche est d'analyser un texte de loi et de produire DEUX versions de vulgari
 
 Pour la version "rue" :
 - Titre : percutant, drôle avec des expressions de rue (ex: "Tickets Resto : la fin des galères pour grailler ?").
-- Résumé : 3-4 phrases en langage parlé urbain naturel ("En gros le bail c'est...", "c'est carré", "claquer ses sous", "grailler", etc.).
+- Résumé : 3-4 phrases en langage parlé urbain naturel, vivant et percutant. DIVERSIFIE impérativement les accroches et débuts de résumé pour éviter toute répétition : alterne entre des tournures variées (ex: "Pour la faire courte...", "Ce que ça raconte...", "Ce que ça dit en vrai...", "Le topo ici c'est que...", "En gros...", "Si on résume le bail...", "Concrètement...", "L'idée derrière ce texte...", etc.). N'utilise PAS toujours la même intro !
 - Arguments pour ("Les bails bien") : 2-3 arguments factuels formulés en langage de rue / familier.
 - Arguments contre ("Les bails qui coincent") : 2-3 arguments factuels formulés en langage de rue / familier.
 
@@ -326,5 +326,49 @@ Sois parfaitement objectif et équilibré sur le fond juridique dans les deux ve
 
         this.logger.log(`✅ Génération Mode Rue terminée : ${processed} traitées, ${skipped} ignorées`);
         return { processed, skipped, total: laws.length };
+    }
+
+    /**
+     * Diversifie les intros du Mode Rue ("En gros", "Pour la faire courte", etc.)
+     */
+    async diversifyStreetIntros(): Promise<{ modified: number; total: number }> {
+        this.logger.log('🎨 Diversification des accroches Mode Rue...');
+        const laws = await this.lawRepository.find();
+
+        const variations = [
+            'En gros,',
+            'Pour la faire courte,',
+            'Ce que ça dit en clair,',
+            'Si on résume l\'affaire,',
+            'Concrètement,',
+            'Le topo ici :',
+            'Pour résumer le bail,',
+            'Version express :',
+        ];
+
+        let modified = 0;
+        let countWithStreet = 0;
+
+        for (let i = 0; i < laws.length; i++) {
+            const law = laws[i];
+            const resume = law.summaryStreet?.sections?.['Résumé'];
+            if (!resume) continue;
+            countWithStreet++;
+
+            const match = resume.match(/^En gros,?\s*/i);
+            if (match) {
+                const pick = variations[modified % variations.length];
+                const restOfResume = resume.slice(match[0].length).trim();
+                const firstChar = restOfResume.charAt(0).toLowerCase();
+                const remainder = restOfResume.slice(1);
+
+                law.summaryStreet.sections['Résumé'] = `${pick} ${firstChar}${remainder}`;
+                await this.lawRepository.save(law);
+                modified++;
+            }
+        }
+
+        this.logger.log(`✅ Diversification terminée : ${modified} lois diversifiées sur ${countWithStreet}.`);
+        return { modified, total: countWithStreet };
     }
 }
