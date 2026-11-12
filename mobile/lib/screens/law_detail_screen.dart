@@ -524,9 +524,9 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             String displayKey = entry.key;
             if (isStreetActive) {
               if (entry.key.toLowerCase().contains('pour')) {
-                displayKey = 'Les bails bien (Pour)';
+                displayKey = 'Bons bails';
               } else if (entry.key.toLowerCase().contains('contre')) {
-                displayKey = 'Les bails qui coincent (Contre)';
+                displayKey = 'Mauvais bails';
               }
             }
 

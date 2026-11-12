@@ -82,8 +82,8 @@ Ta tâche est d'analyser un texte de loi et de produire DEUX versions de vulgari
 Pour la version "rue" :
 - Titre : percutant, drôle avec des expressions de rue (ex: "Tickets Resto : la fin des galères pour grailler ?").
 - Résumé : 3-4 phrases en langage parlé urbain naturel, vivant et percutant. DIVERSIFIE impérativement les accroches et débuts de résumé pour éviter toute répétition : alterne entre des tournures variées (ex: "Pour la faire courte...", "Ce que ça raconte...", "Ce que ça dit en vrai...", "Le topo ici c'est que...", "En gros...", "Si on résume le bail...", "Concrètement...", "L'idée derrière ce texte...", etc.). N'utilise PAS toujours la même intro !
-- Arguments pour ("Les bails bien") : 2-3 arguments factuels formulés en langage de rue / familier.
-- Arguments contre ("Les bails qui coincent") : 2-3 arguments factuels formulés en langage de rue / familier.
+- Arguments pour ("Bons bails") : 2-3 arguments factuels formulés en langage de rue / familier.
+- Arguments contre ("Mauvais bails") : 2-3 arguments factuels formulés en langage de rue / familier.
 
 Réponds UNIQUEMENT avec un objet JSON valide suivant scrupuleusement cette structure :
 {
