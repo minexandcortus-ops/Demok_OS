@@ -57,6 +57,14 @@ export class Law {
         con: string[];
     };
 
+    @Column('jsonb', { nullable: true })
+    summaryStreet: {
+        titleVulgarized?: string;
+        sections: Record<string, string>;
+        pro: string[];
+        con: string[];
+    };
+
     @Column({
         type: 'simple-enum',
         enum: LawStatus,

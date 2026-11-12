@@ -130,6 +130,26 @@ export class AdminIngestionController {
     }
 
     /**
+     * POST /admin/ingestion/update-street-summaries
+     * Génère les résumés Mode Rue pour les lois de l'agenda
+     */
+    @Post('update-street-summaries')
+    async updateStreetSummaries() {
+        this.logger.log('🔥 Déclenchement de la génération Mode Rue pour les lois à l\'agenda');
+        try {
+            const result = await this.summaryUpdaterService.updateStreetSummariesForAgenda();
+            return {
+                success: true,
+                ...result,
+                timestamp: new Date().toISOString(),
+            };
+        } catch (error) {
+            this.logger.error('Erreur lors de la mise à jour des résumés Mode Rue', error);
+            return { success: false, message: error.message, timestamp: new Date().toISOString() };
+        }
+    }
+
+    /**
      * POST /admin/ingestion/amendements/sync
      * Déclenche manuellement la re-sync des amendements pour toutes les lois à l'agenda
      */

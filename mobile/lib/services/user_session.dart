@@ -60,6 +60,12 @@ class UserSession {
   // Helper to get per-user key
   String _getUserKey(String baseKey) => userId != null ? '${baseKey}_$userId' : baseKey;
 
+  // Préférence du Mode Rue (argot urbain) pour les résumés de lois
+  bool get isStreetModePreferred => _prefs?.getBool(_getUserKey('pref_street_mode')) ?? false;
+  Future<void> setStreetModePreferred(bool value) async {
+    await _prefs?.setBool(_getUserKey('pref_street_mode'), value);
+  }
+
   // Tutoriels (Showcase) désactivés globalement
   bool get hasSeenHomeShowcase => true;
   Future<void> setHomeShowcaseSeen() async {}

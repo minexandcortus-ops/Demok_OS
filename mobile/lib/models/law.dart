@@ -19,6 +19,7 @@ class Law {
   final String titleOfficial;
   final String? titleVulgarized;
   final LawSummary? summary;
+  final LawSummary? summaryStreet;
   final String status;
   final DateTime? voteDate;
   final DateTime? agendaDate;
@@ -42,6 +43,7 @@ class Law {
     required this.titleOfficial,
     this.titleVulgarized,
     this.summary,
+    this.summaryStreet,
     required this.status,
     this.voteDate,
     this.agendaDate,
@@ -67,6 +69,17 @@ class Law {
     final lower = title.toLowerCase();
     final cased = lower[0].toUpperCase() + lower.substring(1);
     return cased.replaceAll('Démok', 'Démok');
+  }
+
+  /// Retourne le titre selon le mode d'affichage (Classique ou Rue).
+  String formattedTitleFor({bool streetMode = false}) {
+    if (streetMode && summaryStreet?.titleVulgarized != null && summaryStreet!.titleVulgarized!.isNotEmpty) {
+      final title = summaryStreet!.titleVulgarized!;
+      final lower = title.toLowerCase();
+      final cased = lower[0].toUpperCase() + lower.substring(1);
+      return cased.replaceAll('Démok', 'Démok');
+    }
+    return formattedTitle;
   }
 
   /// Retourne le statut typé (enum) depuis la chaîne JSON.
@@ -156,6 +169,7 @@ class Law {
       titleOfficial: json['titleOfficial'],
       titleVulgarized: json['titleVulgarized'],
       summary: json['summary'] != null ? LawSummary.fromJson(json['summary']) : null,
+      summaryStreet: json['summaryStreet'] != null ? LawSummary.fromJson(json['summaryStreet']) : null,
       status: json['status'],
       voteDate: json['voteDate'] != null ? DateTime.parse(json['voteDate']) : null,
       agendaDate: json['agendaDate'] != null ? DateTime.parse(json['agendaDate']) : null,
@@ -182,14 +196,21 @@ class Law {
 
 /// Résumé simplifié d'une loi avec les sections par catégorie et les arguments Pro/Contra.
 class LawSummary {
+  final String? titleVulgarized;
   final Map<String, String> sections;
   final List<String> pro;
   final List<String> con;
 
-  LawSummary({required this.sections, required this.pro, required this.con});
+  LawSummary({
+    this.titleVulgarized,
+    required this.sections,
+    required this.pro,
+    required this.con,
+  });
 
   factory LawSummary.fromJson(Map<String, dynamic> json) {
     return LawSummary(
+      titleVulgarized: json['titleVulgarized'],
       sections: Map<String, String>.from(json['sections'] ?? {}),
       pro: List<String>.from(json['pro'] ?? []),
       con: List<String>.from(json['con'] ?? []),

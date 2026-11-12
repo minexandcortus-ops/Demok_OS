@@ -44,6 +44,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   bool _isModifyingVote = false;
   Map<String, dynamic>? _voteResult;
   bool _isSummaryExpanded = false;
+  bool _isStreetMode = false;
   
   // XP Notifications
   final Queue<Map<String, dynamic>> _xpQueue = Queue();
@@ -69,6 +70,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   @override
   void initState() {
     super.initState();
+    _isStreetMode = UserSession().isStreetModePreferred && (widget.law.summaryStreet != null);
     _checkVoteStatus();
     _loadAmendements();
   }
@@ -308,7 +310,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                       children: [
                         // Title
                         Text(
-                          widget.law.formattedTitle,
+                          widget.law.formattedTitleFor(streetMode: _isStreetMode && widget.law.summaryStreet != null),
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
@@ -393,8 +395,8 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                           const SizedBox(height: 24),
                         ],
 
-                        // Résumé Démok
-                        if (widget.law.summary != null) ...[
+                        // Résumé Démok (Classique / Mode Rue)
+                        if (widget.law.summary != null || widget.law.summaryStreet != null) ...[
                           _buildSummarySection(),
                         ],
 
@@ -466,32 +468,63 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
   }
 
   Widget _buildSummarySection() {
+    final hasStreet = widget.law.summaryStreet != null && widget.law.summaryStreet!.sections.isNotEmpty;
+    final isStreetActive = _isStreetMode && hasStreet;
+    final activeSummary = isStreetActive ? widget.law.summaryStreet! : widget.law.summary;
+
+    if (activeSummary == null) return const SizedBox.shrink();
+
+    final cardBg = isStreetActive ? const Color(0xFFFFF7ED) : AppColors.paleBlue;
+    final borderColor = isStreetActive ? const Color(0xFFFDBA74) : AppColors.lightBlue;
+    final headerColor = isStreetActive ? const Color(0xFF9A3412) : AppColors.darkBlue;
+    final iconColor = isStreetActive ? const Color(0xFFEA580C) : AppColors.primaryBlue;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.paleBlue,
+        color: cardBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.lightBlue),
+        border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.lightbulb_outline, color: AppColors.primaryBlue, size: 24),
-              const SizedBox(width: 8),
-              const Text(
-                'Résumé Démok',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.darkBlue),
+              Icon(
+                isStreetActive ? Icons.local_fire_department : Icons.lightbulb_outline,
+                color: iconColor,
+                size: 24,
               ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isStreetActive ? 'C\'est quoi le bail ?' : 'Résumé Démok',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: headerColor,
+                  ),
+                ),
+              ),
+              if (hasStreet) _buildModeTogglePill(),
             ],
           ),
           const SizedBox(height: 12),
-          ...widget.law.summary!.sections.entries.map((entry) {
-            final isFirst = entry.key == widget.law.summary!.sections.keys.first;
+          ...activeSummary.sections.entries.map((entry) {
+            final isFirst = entry.key == activeSummary.sections.keys.first;
             
             if (!_isSummaryExpanded && !isFirst) return const SizedBox.shrink();
             
+            String displayKey = entry.key;
+            if (isStreetActive) {
+              if (entry.key.toLowerCase().contains('pour')) {
+                displayKey = 'Les bails bien (Pour)';
+              } else if (entry.key.toLowerCase().contains('contre')) {
+                displayKey = 'Les bails qui coincent (Contre)';
+              }
+            }
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: Column(
@@ -499,13 +532,13 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                 children: [
                   if (entry.key != 'default' && entry.key.toLowerCase() != 'résumé')
                     Text(
-                      entry.key,
+                      displayKey,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: entry.key.toLowerCase().contains('pour') 
                           ? Colors.green[700] 
-                          : (entry.key.toLowerCase().contains('contre') ? Colors.red[700] : AppColors.primaryBlue),
+                          : (entry.key.toLowerCase().contains('contre') ? Colors.red[700] : (isStreetActive ? const Color(0xFFC2410C) : AppColors.primaryBlue)),
                       ),
                     ),
                   const SizedBox(height: 6),
@@ -523,14 +556,14 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               ),
             );
           }).toList(),
-          if (_isSummaryExpanded || !(widget.law.summary!.sections.length > 1 || (widget.law.summary!.sections.values.first.length > 150)))
-            const Padding(
-              padding: EdgeInsets.only(top: 4.0, bottom: 4.0),
+          if (_isSummaryExpanded || !(activeSummary.sections.length > 1 || (activeSummary.sections.values.first.length > 150)))
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Généré par Mistral IA',
-                  style: TextStyle(
+                  isStreetActive ? 'Généré par Mistral IA (Mode Rue 🔥)' : 'Généré par Mistral IA',
+                  style: const TextStyle(
                     fontStyle: FontStyle.italic,
                     color: Colors.grey,
                     fontSize: 12,
@@ -538,7 +571,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
                 ),
               ),
             ),
-          if (widget.law.summary!.sections.length > 1 || (widget.law.summary!.sections.values.first.length > 150))
+          if (activeSummary.sections.length > 1 || (activeSummary.sections.values.first.length > 150))
             TextButton(
               onPressed: () {
                 setState(() {
@@ -553,8 +586,8 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
               ),
               child: Text(
                 _isSummaryExpanded ? 'Voir moins' : 'Lire la suite',
-                style: const TextStyle(
-                  color: AppColors.primaryBlue,
+                style: TextStyle(
+                  color: isStreetActive ? const Color(0xFFEA580C) : AppColors.primaryBlue,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -595,6 +628,62 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildModeTogglePill() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildToggleOption(
+            title: '🏛️ Classique',
+            isSelected: !_isStreetMode,
+            activeColor: AppColors.primaryBlue,
+            onTap: () => setState(() => _isStreetMode = false),
+          ),
+          _buildToggleOption(
+            title: '🔥 Mode Rue',
+            isSelected: _isStreetMode,
+            activeColor: const Color(0xFFEA580C),
+            onTap: () => setState(() => _isStreetMode = true),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption({
+    required String title,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.grey[700],
+          ),
+        ),
       ),
     );
   }

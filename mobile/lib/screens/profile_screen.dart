@@ -39,6 +39,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   CitizenProgress? _gamificationProgress;
   final GamificationService _gamificationService = GamificationService();
   bool _notificationsAuthorized = false;
+  bool _isStreetMode = false;
 
   final GlobalKey _xpKey = GlobalKey();
   final GlobalKey _rankKey = GlobalKey();
@@ -49,6 +50,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
   @override
   void initState() {
     super.initState();
+    _isStreetMode = UserSession().isStreetModePreferred;
     _fetchProfile();
     _fetchGamificationProgress();
     _checkNotificationStatus();
@@ -404,7 +406,12 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                 _profileData!['email'] ?? 'Email masqué',
               ),
             
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+
+            // Préférence du ton des résumés (Classique vs Mode Rue)
+            _buildSummaryToneSection(),
+
+            const SizedBox(height: 24),
 
             // Notification Preferences
             Container(
@@ -586,6 +593,121 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryToneSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _isStreetMode ? Icons.local_fire_department : Icons.record_voice_over,
+                color: _isStreetMode ? const Color(0xFFEA580C) : AppColors.primaryBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Ton des résumés',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Choisissez le style de vulgarisation affiché par défaut sur les lois.',
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildToneChoiceCard(
+                  title: '🏛️ Classique',
+                  subtitle: 'Neutre et synthétique',
+                  isSelected: !_isStreetMode,
+                  activeColor: AppColors.primaryBlue,
+                  onTap: () async {
+                    await UserSession().setStreetModePreferred(false);
+                    if (mounted) setState(() => _isStreetMode = false);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildToneChoiceCard(
+                  title: '🔥 Mode Rue',
+                  subtitle: 'Argot urbain percutant',
+                  isSelected: _isStreetMode,
+                  activeColor: const Color(0xFFEA580C),
+                  onTap: () async {
+                    await UserSession().setStreetModePreferred(true);
+                    if (mounted) setState(() => _isStreetMode = true);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToneChoiceCard({
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.08) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? activeColor : Colors.grey[300]!,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? activeColor : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                color: isSelected ? activeColor.withValues(alpha: 0.9) : Colors.grey[600],
               ),
             ),
           ],

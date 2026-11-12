@@ -60,7 +60,7 @@ export class SummaryUpdaterService {
         }
 
         try {
-            this.logger.log(`🔄 Appel Mistral AI (modèle: ${mistralModel}) pour titre et résumé...`);
+            this.logger.log(`🔄 Appel Mistral AI (modèle: ${mistralModel}) pour titre et résumé (Classique + Mode Rue)...`);
 
             const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
                 method: 'POST',
@@ -74,23 +74,41 @@ export class SummaryUpdaterService {
                     messages: [
                         {
                             role: 'system',
-                            content: `Tu es un expert législatif. Ta tâche est de vulgariser des textes de loi pour le grand public.
-                            Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure :
-                            {
-                                "titre": "Un titre court et percutant (max 10-15 mots)",
-                                "resume": "Un résumé clair et accessible en 3-4 phrases",
-                                "arguments_pour": ["Argument 1", "Argument 2", "..."],
-                                "arguments_contre": ["Argument 1", "Argument 2", "..."]
-                            }
-                            Sois objectif et équilibré. Base-toi STRICTEMENT sur le texte fourni pour extraire les arguments réels en faveur et en défaveur de la proposition, de manière factuelle et neutre. Ne devine pas d'arguments non mentionnés ou implicites.`,
+                            content: `Tu es un expert législatif et vulgarisateur pour l'application citoyenne Démok.
+Ta tâche est d'analyser un texte de loi et de produire DEUX versions de vulgarisation :
+1) Une version "classique" : neutre, claire, factuelle et accessible au grand public (style institutionnel vulgarisé).
+2) Une version "rue" : en langage urbain / argot des cités moderne, débridé, dynamique et percutant, tout en restant 100% fidèle au fond de la loi, impartial et sans inventer de fausses informations.
+
+Pour la version "rue" :
+- Titre : percutant, drôle avec des expressions de rue (ex: "Tickets Resto : la fin des galères pour grailler ?").
+- Résumé : 3-4 phrases en langage parlé urbain naturel ("En gros le bail c'est...", "c'est carré", "claquer ses sous", "grailler", etc.).
+- Arguments pour ("Les bails bien") : 2-3 arguments factuels formulés en langage de rue / familier.
+- Arguments contre ("Les bails qui coincent") : 2-3 arguments factuels formulés en langage de rue / familier.
+
+Réponds UNIQUEMENT avec un objet JSON valide suivant scrupuleusement cette structure :
+{
+    "classique": {
+        "titre": "Un titre vulgarisé clair et percutant (max 10-15 mots)",
+        "resume": "Un résumé clair et accessible en 3-4 phrases",
+        "arguments_pour": ["Argument 1", "Argument 2"],
+        "arguments_contre": ["Argument 1", "Argument 2"]
+    },
+    "rue": {
+        "titre": "Un titre en langage de rue percutant",
+        "resume": "Le résumé en langage rue / argot accessible et vivant",
+        "arguments_pour": ["Argument 1 rue", "Argument 2 rue"],
+        "arguments_contre": ["Argument 1 rue", "Argument 2 rue"]
+    }
+}
+Sois parfaitement objectif et équilibré sur le fond juridique dans les deux versions.`,
                         },
                         {
                             role: 'user',
                             content: `Analyse ce texte :\nTitre officiel : ${law.titleOfficial}\nContenu brut : ${law.rawText ? law.rawText.substring(0, 4000) : (law.titleVulgarized || law.titleOfficial)}`,
                         },
                     ],
-                    response_format: { type: "json_object" }, // Nouveau paramètre Mistral si supporté, sinon le prompt system suffit souvent
-                    max_tokens: 600,
+                    response_format: { type: "json_object" },
+                    max_tokens: 1200,
                 }),
             });
 
@@ -102,45 +120,70 @@ export class SummaryUpdaterService {
             const content = data.choices[0].message.content;
 
             // Parsing de la réponse JSON
-            let aiResult;
+            let aiResult: any;
             try {
                 aiResult = JSON.parse(content);
             } catch (e) {
-                // Fallback si l'IA renvoie du texte brut malgré la consigne
                 this.logger.warn('⚠️ Mistral a renvoyé du texte brut, tentative de récupération...');
                 aiResult = {
-                    titre: null,
-                    resume: content,
-                    arguments_pour: [],
-                    arguments_contre: []
+                    classique: {
+                        titre: null,
+                        resume: content,
+                        arguments_pour: [],
+                        arguments_contre: []
+                    }
                 };
             }
 
-            this.logger.log(`✅ Résumé IA généré (${aiResult.resume?.length || 0} chars, ${aiResult.arguments_pour?.length || 0} pour, ${aiResult.arguments_contre?.length || 0} contre)`);
+            const classique = aiResult.classique || {
+                titre: aiResult.titre,
+                resume: aiResult.resume,
+                arguments_pour: aiResult.arguments_pour,
+                arguments_contre: aiResult.arguments_contre,
+            };
 
-            // Mettre à jour avec le résumé IA
-            if (aiResult.resume) {
-                // Sanitize whitespace but KEEP newlines for formatting
-                defaultSummary.sections['R\u00e9sum\u00e9'] = aiResult.resume.replace(/[ \t]+/g, ' ').trim();
+            const rue = aiResult.rue;
 
-                // Ajouter les arguments Pour
-                if (aiResult.arguments_pour && Array.isArray(aiResult.arguments_pour) && aiResult.arguments_pour.length > 0) {
-                    defaultSummary.sections['Arguments Pour'] = aiResult.arguments_pour.map(p => `\u2022 ${p.trim()}`).join('\n');
+            this.logger.log(`✅ Résumé IA Classique généré (${classique?.resume?.length || 0} chars)`);
+
+            // Mettre à jour avec le résumé Classique
+            if (classique?.resume) {
+                defaultSummary.sections['Résumé'] = classique.resume.replace(/[ \t]+/g, ' ').trim();
+
+                if (classique.arguments_pour && Array.isArray(classique.arguments_pour) && classique.arguments_pour.length > 0) {
+                    defaultSummary.sections['Arguments Pour'] = classique.arguments_pour.map((p: string) => `• ${p.trim()}`).join('\n');
                 }
-                // Ajouter les arguments Contre
-                if (aiResult.arguments_contre && Array.isArray(aiResult.arguments_contre) && aiResult.arguments_contre.length > 0) {
-                    defaultSummary.sections['Arguments Contre'] = aiResult.arguments_contre.map(p => `\u2022 ${p.trim()}`).join('\n');
+                if (classique.arguments_contre && Array.isArray(classique.arguments_contre) && classique.arguments_contre.length > 0) {
+                    defaultSummary.sections['Arguments Contre'] = classique.arguments_contre.map((p: string) => `• ${p.trim()}`).join('\n');
                 }
             } else {
-                // Fallback si l'IA n'a pas renvoyé de résumé
-                defaultSummary.sections['R\u00e9sum\u00e9'] = `Cette loi a \u00e9t\u00e9 mise \u00e0 jour le ${new Date().toLocaleDateString('fr-FR')}. Contenu principal : ${law.titleOfficial}.`;
+                defaultSummary.sections['Résumé'] = `Cette loi a été mise à jour le ${new Date().toLocaleDateString('fr-FR')}. Contenu principal : ${law.titleOfficial}.`;
             }
 
-            // Mettre à jour le titre vulgarisé si fourni et pertinent
-            if (aiResult.titre && aiResult.titre.length > 5) {
-                const cleanTitre = aiResult.titre.replace(/\s+/g, ' ').trim();
+            // Mettre à jour le titre vulgarisé si fourni
+            if (classique?.titre && classique.titre.length > 5) {
+                const cleanTitre = classique.titre.replace(/\s+/g, ' ').trim();
                 law.titleVulgarized = cleanTitre;
                 this.logger.log(`✅ Titre vulgarisé mis à jour : "${cleanTitre}"`);
+            }
+
+            // Mettre à jour avec le Mode Rue si fourni
+            if (rue && rue.resume) {
+                const streetSummary: any = {
+                    titleVulgarized: rue.titre ? rue.titre.replace(/\s+/g, ' ').trim() : undefined,
+                    sections: {},
+                    pro: rue.arguments_pour || [],
+                    con: rue.arguments_contre || [],
+                };
+                streetSummary.sections['Résumé'] = rue.resume.replace(/[ \t]+/g, ' ').trim();
+                if (rue.arguments_pour && Array.isArray(rue.arguments_pour) && rue.arguments_pour.length > 0) {
+                    streetSummary.sections['Arguments Pour'] = rue.arguments_pour.map((p: string) => `• ${p.trim()}`).join('\n');
+                }
+                if (rue.arguments_contre && Array.isArray(rue.arguments_contre) && rue.arguments_contre.length > 0) {
+                    streetSummary.sections['Arguments Contre'] = rue.arguments_contre.map((p: string) => `• ${p.trim()}`).join('\n');
+                }
+                law.summaryStreet = streetSummary;
+                this.logger.log(`✅ Mode Rue généré (${streetSummary.sections['Résumé'].length} chars)`);
             }
 
         } catch (error) {
@@ -251,5 +294,37 @@ export class SummaryUpdaterService {
 
         this.logger.log(`🧹 Sanitisation terminée : ${fixed} loi(s) corrigée(s).`);
         return { fixed };
+    }
+
+    /**
+     * Met à jour les résumés Mode Rue pour les lois à l'ordre du jour
+     */
+    async updateStreetSummariesForAgenda(): Promise<{ processed: number; skipped: number; total: number }> {
+        this.logger.log('🔍 Recherche des lois à l\'agenda sans Mode Rue...');
+        const laws = await this.lawRepository.find({
+            where: { isOnAgenda: true },
+        });
+
+        let processed = 0;
+        let skipped = 0;
+
+        for (const law of laws) {
+            try {
+                if (law.summaryStreet && law.summaryStreet.sections && Object.keys(law.summaryStreet.sections).length > 0) {
+                    skipped++;
+                    continue;
+                }
+                await this.updateSummary(law);
+                processed++;
+                this.logger.log(`✅ [${processed}/${laws.length}] Mode Rue généré pour : ${law.titleOfficial?.substring(0, 50)}...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                this.logger.error(`❌ Erreur Mode Rue sur ${law.externalId}: ${error.message}`);
+                skipped++;
+            }
+        }
+
+        this.logger.log(`✅ Génération Mode Rue terminée : ${processed} traitées, ${skipped} ignorées`);
+        return { processed, skipped, total: laws.length };
     }
 }
