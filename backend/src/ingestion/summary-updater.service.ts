@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Law } from '../laws/law.entity';
 import { ConfigService } from '@nestjs/config';
+import { Category } from '../laws/category.entity';
+import { CategorizationService } from '../laws/categorization.service';
+import { buildClassificationInstructions } from '../laws/taxonomy';
 
 @Injectable()
 export class SummaryUpdaterService {
@@ -12,6 +15,9 @@ export class SummaryUpdaterService {
         @InjectRepository(Law)
         private lawRepository: Repository<Law>,
         private configService: ConfigService,
+        @InjectRepository(Category)
+        private categoryRepository: Repository<Category>,
+        private categorizationService: CategorizationService,
     ) { }
 
     /**
@@ -58,6 +64,8 @@ export class SummaryUpdaterService {
             await this.lawRepository.save(law);
             return;
         }
+
+        const allCategories = await this.categoryRepository.find();
 
         try {
             this.logger.log(`🔄 Appel Mistral AI (modèle: ${mistralModel}) pour titre et résumé (Classique + Mode Rue)...`);
@@ -110,7 +118,8 @@ Réponds UNIQUEMENT avec un objet JSON valide suivant scrupuleusement cette stru
         }
     }
 }
-Sois parfaitement objectif et équilibré sur le fond juridique dans les deux versions.`,
+Sois parfaitement objectif et équilibré sur le fond juridique dans les deux versions.
+${buildClassificationInstructions(allCategories)}`,
                         },
                         {
                             role: 'user',
@@ -118,7 +127,7 @@ Sois parfaitement objectif et équilibré sur le fond juridique dans les deux ve
                         },
                     ],
                     response_format: { type: "json_object" },
-                    max_tokens: 1800,
+                    max_tokens: 2000,
                 }),
             });
 
@@ -153,6 +162,11 @@ Sois parfaitement objectif et équilibré sur le fond juridique dans les deux ve
             };
 
             const rue = aiResult.rue;
+
+            // Classification thème × territoire (même appel IA, validée contre la taxonomie fermée)
+            if (this.categorizationService.applyAiClassification(law, aiResult.classification, allCategories)) {
+                this.logger.log(`🏷️ Classification IA : ${law.categories.map((c) => c.slug).join(', ')} · ${law.territories.join(', ')}`);
+            }
 
             this.logger.log(`✅ Résumé IA Classique généré (${classique?.resume?.length || 0} chars)`);
 

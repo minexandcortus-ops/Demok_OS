@@ -59,9 +59,10 @@ export class VotesController {
         @Query('page') page: number = 1,
         @Query('limit') limit: number = 10,
         @Query('votedOnly') votedOnly?: string,
+        @Query('territory') territory?: string,
     ) {
-        const categoryIds = categories ? categories.split(',').map(Number) : [];
-        return this.votesService.getLawsFeed(categoryIds, query, region, status, user?.id, sortBy, page, limit, votedOnly);
+        const categoryIds = categories ? categories.split(',').map(Number).filter(Number.isFinite) : [];
+        return this.votesService.getLawsFeed(categoryIds, query, region, status, user?.id, sortBy, page, limit, votedOnly, territory);
     }
 
     /**

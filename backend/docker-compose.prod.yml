@@ -10,6 +10,8 @@ services:
     shm_size: '256mb'
     environment:
       - PORT=3000
+      # Schéma géré par les migrations TypeORM (exécutées au démarrage)
+      - DB_SYNCHRONIZE=false
       - DATABASE_HOST=db
       - DATABASE_PORT=5432
       - DATABASE_USER=${DATABASE_USER}

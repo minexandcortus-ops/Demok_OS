@@ -1,3 +1,4 @@
+import { expandTerritoryFilter } from '../laws/taxonomy';
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Brackets } from 'typeorm';
@@ -269,9 +270,16 @@ export class VotesService {
         page: number = 1,
         limit: number = 10,
         votedOnly?: string,
+        territory?: string,
     ) {
         const queryBuilder = this.lawRepository.createQueryBuilder('law')
             .leftJoinAndSelect('law.categories', 'category');
+
+        if (territory) {
+            const codes = expandTerritoryFilter(territory);
+            // && : au moins un territoire commun (OUTRE_MER couvre chaque territoire ultramarin)
+            queryBuilder.andWhere('law.territories && :territories', { territories: codes.length ? codes : ['__none__'] });
+        }
 
         if (categoryIds.length > 0) {
             queryBuilder.andWhere('category.id IN (:...categoryIds)', { categoryIds });

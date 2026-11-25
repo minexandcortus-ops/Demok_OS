@@ -26,6 +26,9 @@ class Law {
   final String source;
   final VoteStatistics? statistics;
   final List<Category> categories;
+
+  /// Axe territoire (codes, cf. models/territory.dart)
+  final List<String> territories;
   final String? userVote;
   final DateTime? dateDepot;
   final DateTime? datePromulgation;
@@ -50,6 +53,7 @@ class Law {
     required this.source,
     this.statistics,
     this.categories = const [],
+    this.territories = const [],
     this.userVote,
     this.dateDepot,
     this.datePromulgation,
@@ -178,6 +182,7 @@ class Law {
       categories: (json['categories'] as List<dynamic>?)
           ?.map((e) => Category.fromJson(e))
           .toList() ?? [],
+      territories: (json['territories'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
       userVote: json['userVote'],
       dateDepot: json['dateDepot'] != null ? DateTime.parse(json['dateDepot']) : null,
       datePromulgation: json['datePromulgation'] != null ? DateTime.parse(json['datePromulgation']) : null,

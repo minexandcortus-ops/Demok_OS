@@ -21,84 +21,112 @@ export class CategoriesSeedService implements OnModuleInit {
             slug: 'finances',
             color: '#FFD700',
             icon: '💰',
-            keywords: 'budget,état,fiscalité,impôts,taxes,dette,publique,finances,publiques,loi,finances,TVA,contributions,prélèvements,budget,trésorerie,comptabilité,dépenses,recettes',
+            keywords: 'loi de finances,projet de loi de finances,loi de finances rectificative,budget,budgétaire,fiscalité,fiscal,impôt,impôts,impôt sur le revenu,taxe,taxes,TVA,dette publique,déficit,finances publiques,prélèvements obligatoires,trésor,crédit d\'impôt,niche fiscale,cour des comptes,dépense publique',
         },
         {
             name: 'Social & Santé',
             slug: 'social_sante',
             color: '#FF6B6B',
             icon: '🏥',
-            keywords: 'sécurité,sociale,santé,publique,hôpitaux,assurance,maladie,retraites,pensions,handicap,dépendance,famille,enfance,allocations,CAF,CPAM,protection,sociale,solidarité',
+            keywords: 'sécurité sociale,financement de la sécurité sociale,santé,santé publique,hôpital,hôpitaux,assurance maladie,médecin,médecins,soins,soins palliatifs,patients,médicament,médicaments,handicap,dépendance,autonomie,allocations,CAF,CPAM,solidarité,EHPAD,maladie',
         },
         {
             name: 'Travail',
             slug: 'travail',
             color: '#4ECDC4',
             icon: '💼',
-            keywords: 'code,travail,emploi,chômage,formation,professionnelle,dialogue,social,syndicats,salaires,contrats,travail,fonction,publique,congés,retraite,licenciement,CDI,CDD',
+            keywords: 'code du travail,emploi,chômage,assurance chômage,formation professionnelle,apprentissage,dialogue social,syndicats,syndical,salaire,salaires,salariés,SMIC,contrat de travail,fonction publique,fonctionnaires,congés,retraite,retraites,réforme des retraites,licenciement,CDI,CDD,télétravail,travailleurs',
         },
         {
             name: 'Éducation',
             slug: 'education',
             color: '#95E1D3',
             icon: '📚',
-            keywords: 'enseignement,scolaire,université,enseignement,supérieur,recherche,scientifique,innovation,étudiants,professeurs,écoles,formation,éducation,nationale,baccalauréat,diplôme,campus',
+            keywords: 'éducation,éducation nationale,enseignement,enseignement supérieur,école,écoles,collège,lycée,université,universités,recherche,étudiants,élèves,professeurs,enseignants,baccalauréat,diplôme,scolaire,campus',
         },
         {
             name: 'Justice',
             slug: 'justice',
             color: '#8B4513',
             icon: '⚖️',
-            keywords: 'droit,pénal,droit,civil,tribunaux,juges,procédure,judiciaire,libertés,publiques,droits,homme,protection,données,RGPD,justice,avocat,procès,condamnation,peine',
+            keywords: 'justice,justice pénale,droit pénal,code pénal,droit civil,code civil,tribunal,tribunaux,juge,juges,magistrats,procédure pénale,procédure judiciaire,prison,prisons,détenus,pénitentiaire,peine,peines,condamnation,avocat,avocats,procès,libertés publiques',
         },
         {
             name: 'Sécurité',
             slug: 'securite',
             color: '#1A535C',
             icon: '🚨',
-            keywords: 'police,gendarmerie,défense,nationale,armée,terrorisme,cybersécurité,renseignement,sécurité,intérieure,forces,ordre,surveillance,criminalité,lutte,terrorisme',
+            keywords: 'sécurité intérieure,police,policiers,gendarmerie,gendarmes,forces de l\'ordre,défense nationale,défense,armée,armées,militaire,militaires,programmation militaire,terrorisme,terroriste,cybersécurité,renseignement,criminalité,délinquance,narcotrafic,stupéfiants,vidéoprotection,surveillance',
         },
         {
             name: 'Écologie',
             slug: 'ecologie',
             color: '#2ECC71',
             icon: '🌱',
-            keywords: 'climat,biodiversité,énergie,transition,écologique,énergies,renouvelables,pollution,déchets,eau,air,protection,animale,environnement,carbone,vert,développement,durable',
+            keywords: 'écologie,écologique,transition écologique,transition énergétique,climat,climatique,biodiversité,énergie,énergies renouvelables,nucléaire,éolien,photovoltaïque,pollution,déchets,eau,qualité de l\'air,environnement,environnemental,carbone,émissions,développement durable,protection animale,bien-être animal',
         },
         {
             name: 'Aménagement',
             slug: 'amenagement',
             color: '#9B59B6',
             icon: '🏗️',
-            keywords: 'urbanisme,logement,construction,transports,mobilité,infrastructures,routes,ferroviaire,territoires,ruralité,montagne,littoral,aménagement,territoire,ville,métropole',
+            keywords: 'urbanisme,logement,logements,logement social,construction,bâtiment,transports,transport,mobilité,mobilités,infrastructures,routes,routier,ferroviaire,SNCF,aménagement du territoire,ruralité,rural,montagne,littoral,ville,villes,métropole,métropoles',
         },
         {
             name: 'Agriculture',
             slug: 'agriculture',
             color: '#F39C12',
             icon: '🌾',
-            keywords: 'agriculture,élevage,pêche,aquaculture,alimentation,filières,agricoles,PAC,forêt,viticulture,agriculteur,exploitation,agricole,rurale,terre,culture,céréales',
+            keywords: 'agriculture,agricole,agricoles,agriculteurs,agriculteur,élevage,éleveurs,pêche,pêcheurs,aquaculture,alimentation,alimentaire,filières agricoles,PAC,politique agricole commune,forêt,forêts,viticulture,exploitation agricole,céréales,pesticides',
         },
         {
             name: 'Culture',
             slug: 'culture',
             color: '#E91E63',
             icon: '🎭',
-            keywords: 'patrimoine,culturel,arts,création,artistique,médias,audiovisuel,presse,cinéma,musées,sport,spectacles,théâtre,musique,livre,lecture,artiste,culture',
+            keywords: 'culture,culturel,culturelle,patrimoine,arts,création artistique,artistes,médias,audiovisuel,presse,journalistes,cinéma,musées,musée,sport,sportifs,jeux olympiques,spectacle,spectacles,théâtre,musique,livre,lecture,bibliothèques',
         },
         {
             name: 'International',
             slug: 'international',
             color: '#3498DB',
             icon: '🌍',
-            keywords: 'relations,internationales,affaires,européennes,Union,européenne,diplomatie,coopération,internationale,développement,francophonie,traités,UE,Europe,monde,étranger',
+            keywords: 'relations internationales,affaires étrangères,Union européenne,européen,européenne,Europe,diplomatie,diplomatique,coopération internationale,francophonie,traité,traités,accord international,convention internationale,ratification,UE,ONU,OTAN',
+        },
+        {
+            name: 'Économie & entreprises',
+            slug: 'economie',
+            color: '#F97316',
+            icon: '🏭',
+            keywords: 'économie,économique,vie économique,simplification de la vie économique,entreprise,entreprises,PME,TPE,start-up,industrie,industriel,commerce,commerçants,artisanat,artisans,consommation,consommateurs,concurrence,pouvoir d\'achat,banque,banques,assurance,assurances,croissance,attractivité,souveraineté économique',
+        },
+        {
+            name: 'Société & vie quotidienne',
+            slug: 'societe_vie',
+            color: '#EC4899',
+            icon: '🏠',
+            keywords: 'famille,familles,enfance,enfants,parents,mariage,divorce,fin de vie,aide à mourir,soins palliatifs,bioéthique,PMA,adoption,égalité femmes-hommes,égalité entre les femmes et les hommes,violences conjugales,violences faites aux femmes,discriminations,laïcité,associations,vie associative,jeunesse,animaux de compagnie',
+        },
+        {
+            name: 'Numérique',
+            slug: 'numerique',
+            color: '#06B6D4',
+            icon: '💻',
+            keywords: 'numérique,numériques,internet,plateformes,plateformes en ligne,réseaux sociaux,intelligence artificielle,données personnelles,RGPD,protection des données,cloud,télécommunications,fibre,5G,espace numérique,contenus en ligne,cyberharcèlement,écrans',
+        },
+        {
+            name: 'Immigration & nationalité',
+            slug: 'immigration',
+            color: '#8B5CF6',
+            icon: '🛂',
+            keywords: 'immigration,immigrés,étrangers,étranger,asile,droit d\'asile,demandeurs d\'asile,titre de séjour,titres de séjour,séjour des étrangers,nationalité,naturalisation,intégration,expulsion,éloignement,OQTF,regroupement familial,frontières,contrôle aux frontières,migrants,migratoire',
         },
         {
             name: 'Institutions',
             slug: 'institutions',
             color: '#34495E',
             icon: '🏛️',
-            keywords: 'constitution,organisation,pouvoirs,publics,collectivités,territoriales,décentralisation,élections,vie,démocratique,sénat,assemblée,nationale,député,gouvernement,république',
+            keywords: 'constitution,constitutionnel,constitutionnelle,révision constitutionnelle,pouvoirs publics,collectivités territoriales,collectivités,décentralisation,élections,électoral,scrutin,vie démocratique,Sénat,Assemblée nationale,Parlement,parlementaire,députés,député,sénateurs,gouvernement,République,référendum,communes,maires,départements,régions',
         },
     ];
 
@@ -112,20 +140,32 @@ export class CategoriesSeedService implements OnModuleInit {
     }
 
     private async seedCategories() {
-        const existingCount = await this.categoryRepository.count();
-
-        if (existingCount > 0) {
-            this.logger.log('Categories already seeded');
-            return;
-        }
-
-        this.logger.log('Seeding categories...');
+        const existing = await this.categoryRepository.find();
+        const bySlug = new Map(existing.map((c) => [c.slug, c]));
+        let created = 0;
+        let updated = 0;
 
         for (const categoryData of this.categories) {
-            const category = this.categoryRepository.create(categoryData);
-            await this.categoryRepository.save(category);
+            const current = bySlug.get(categoryData.slug);
+            if (!current) {
+                await this.categoryRepository.save(this.categoryRepository.create(categoryData));
+                created++;
+            } else if (current.keywords !== categoryData.keywords) {
+                // Les mots-clés sont gérés dans le code : on les resynchronise (nom, couleur et icône conservés)
+                await this.categoryRepository.update(current.id, { keywords: categoryData.keywords });
+                updated++;
+            }
         }
 
-        this.logger.log(`✅ Seeded ${this.categories.length} categories`);
+        if (created || updated) {
+            this.logger.log(`✅ Catégories : ${created} créée(s), ${updated} mot(s)-clé(s) mis à jour`);
+        } else {
+            this.logger.log('Categories already seeded');
+        }
+    }
+
+    /** Exposé pour les tests. */
+    get seedData(): ReadonlyArray<CategorySeed> {
+        return this.categories;
     }
 }
