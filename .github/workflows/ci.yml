@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (NestJS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test -- --ci
+      - run: npm run build
+
+  migrations:
+    name: Database migrations (PostgreSQL)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: demok
+          POSTGRES_PASSWORD: demok
+          POSTGRES_DB: demok
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U demok"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: demok
+      DATABASE_PASSWORD: demok
+      DATABASE_NAME: demok
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Apply all migrations on an empty database
+        run: npm run migration:run
+      - name: Fail if entities and migrations have drifted
+        run: npm run typeorm -- migration:generate src/database/migrations/Drift --check
+
+  mobile:
+    name: Mobile (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.50.1
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test

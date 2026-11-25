@@ -20,6 +20,7 @@ import { Candidate } from '../surveys/candidate.entity';
 import { Deputy } from '../votes/deputy.entity';
 import { OfficialVote } from '../votes/official-vote.entity';
 import { CategoriesModule } from '../laws/categories.module';
+import { GroupVotesModule } from '../votes/group-votes.module';
 
 import { NotificationModule } from '../notifications/notification.module';
 import { PromulgationSyncService } from './promulgation-sync.service';
@@ -30,6 +31,7 @@ import { PromulgationSyncService } from './promulgation-sync.service';
         TypeOrmModule.forFeature([Law, Amendement, Category, Candidate, Deputy, OfficialVote]),
         CategoriesModule,
         NotificationModule,
+        GroupVotesModule,
     ],
     providers: [
         IngestionANService,

@@ -49,6 +49,16 @@ export class AdminIngestionController {
     }
 
     /**
+     * POST /admin/ingestion/group-votes/backfill
+     * Calcule les votes par groupe politique des lois déjà résolues.
+     */
+    @Post('group-votes/backfill')
+    async backfillGroupVotes() {
+        const result = await this.deputyVoteIngestionService.backfillGroupVotes();
+        return { success: true, ...result, timestamp: new Date().toISOString() };
+    }
+
+    /**
      * POST /admin/ingestion/deputy-votes/sync
      * Déclenche manuellement la résolution des votes des députés.
      * Résout les lois dont la date est passée et récupère les scrutins AN.
