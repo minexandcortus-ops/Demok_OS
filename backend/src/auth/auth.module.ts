@@ -11,6 +11,8 @@ import { Deputy } from '../votes/deputy.entity';
 import { GamificationModule } from '../gamification/gamification.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AUTH_THROTTLER_OPTIONS } from './auth.throttle';
 
 /**
  * Module d'authentification et de gestion des profils citoyens.
@@ -28,6 +30,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
                 signOptions: { expiresIn: '30d' }, // Session longue pour l'application mobile
             }),
         }),
+        ThrottlerModule.forRoot(AUTH_THROTTLER_OPTIONS),
         GamificationModule,
         NotificationModule,
     ],

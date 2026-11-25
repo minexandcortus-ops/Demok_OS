@@ -11,6 +11,7 @@ import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { GamificationService } from '../gamification/gamification.service';
 import { MailService } from '../notifications/mail/mail.service';
+import { generateOtp, hashOtp, verifyOtpHash, OTP_MAX_ATTEMPTS, OTP_TTL_MS } from './otp.util';
 
 @Injectable()
 export class AuthService {
@@ -93,13 +94,15 @@ export class AuthService {
         user.passwordHash = await this.hashPassword(dto.password);
         user.onboardingCompleted = true;
 
-        // Generate OTP for email verification
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otpCode = otpCode;
-        user.otpExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
         user.emailVerified = false;
 
-        const savedUser = await this.userRepository.save(user);
+        // L'id est nécessaire pour lier le hash de l'OTP à l'utilisateur
+        let savedUser = await this.userRepository.save(user);
+
+        // Generate OTP for email verification
+        const otpCode = generateOtp();
+        this.assignOtp(savedUser, otpCode);
+        savedUser = await this.userRepository.save(savedUser);
 
         // Create Citizen profile
         const citizen = new Citizen();
@@ -126,6 +129,15 @@ export class AuthService {
     }
 
     /**
+     * Stocke le hash d'un nouvel OTP, réinitialise le compteur d'essais et l'expiration.
+     */
+    private assignOtp(user: User, otpCode: string): void {
+        user.otpCode = hashOtp(user.id, otpCode);
+        user.otpExpires = new Date(Date.now() + OTP_TTL_MS);
+        user.otpAttempts = 0;
+    }
+
+    /**
      * Verifies the OTP code sent by email after registration
      */
     async verifyOtp(userId: string, code: string) {
@@ -143,14 +155,31 @@ export class AuthService {
             throw new BadRequestException('Le code a expiré. Demande un nouveau code.');
         }
 
-        if (user.otpCode !== code.trim()) {
-            throw new BadRequestException('Code incorrect.');
+        if ((user.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+            throw new BadRequestException('Trop de tentatives. Demande un nouveau code.');
+        }
+
+        if (!verifyOtpHash(user.id, code, user.otpCode)) {
+            user.otpAttempts = (user.otpAttempts ?? 0) + 1;
+            if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+                // Invalide le code : un nouveau devra être demandé
+                user.otpCode = null;
+                user.otpExpires = null;
+            }
+            await this.userRepository.save(user);
+            const remaining = Math.max(OTP_MAX_ATTEMPTS - user.otpAttempts, 0);
+            throw new BadRequestException(
+                remaining > 0
+                    ? `Code incorrect. ${remaining} tentative(s) restante(s).`
+                    : 'Trop de tentatives. Demande un nouveau code.',
+            );
         }
 
         // Mark as verified, clear OTP
         user.emailVerified = true;
         user.otpCode = null;
         user.otpExpires = null;
+        user.otpAttempts = 0;
         await this.userRepository.save(user);
 
         const accessToken = this.generateToken(user);
@@ -180,9 +209,8 @@ export class AuthService {
         if (!user) throw new UnauthorizedException('Utilisateur introuvable');
         if (user.emailVerified) return { success: true, message: 'Email déjà vérifié.' };
 
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otpCode = otpCode;
-        user.otpExpires = new Date(Date.now() + 30 * 60 * 1000);
+        const otpCode = generateOtp();
+        this.assignOtp(user, otpCode);
         await this.userRepository.save(user);
 
         // Decrypt email to resend
