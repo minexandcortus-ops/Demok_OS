@@ -1,7 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -17,19 +16,7 @@ async function bootstrap() {
         credentials: true,
     });
 
-    // Serve Flutter Web App
-    const webBuildPath = join(process.cwd(), '..', 'mobile', 'build', 'web');
-    app.useStaticAssets(webBuildPath);
-    
-    
-    // Fallback to index.html for SPA routing
-    app.use((req: any, res: any, next: any) => {
-        if (req.method === 'GET' && !req.path.startsWith('/api')) {
-            res.sendFile(join(webBuildPath, 'index.html'));
-        } else {
-            next();
-        }
-    });
+    // Le front (Flutter Web) est servi par Firebase Hosting : l'API ne sert que /api et /uploads.
 
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');

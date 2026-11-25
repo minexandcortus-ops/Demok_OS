@@ -37,6 +37,8 @@ services:
     image: caddy:2-alpine
     container_name: demok_caddy
     restart: always
+    environment:
+      - DOMAIN=${DOMAIN:?DOMAIN must be set (ex. api.demok.fr)}
     ports:
       - "80:80"
       - "443:443"
