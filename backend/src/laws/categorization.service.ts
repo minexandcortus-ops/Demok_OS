@@ -3,6 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './category.entity';
 import { Law } from './law.entity';
+import { scoreCategories, selectCategories } from './keyword-matcher';
+
+export const DEFAULT_CATEGORY_SLUG = 'institutions';
 
 @Injectable()
 export class CategorizationService {
@@ -14,6 +17,22 @@ export class CategorizationService {
         @InjectRepository(Law)
         private readonly lawRepository: Repository<Law>,
     ) { }
+
+    /**
+     * Calcule les catégories d'une loi (sans persister).
+     * Repli sur « Institutions » si aucun mot-clé ne correspond.
+     */
+    computeCategories(law: Law, allCategories: Category[]): Category[] {
+        const title = [law.titleOfficial, law.titleVulgarized].filter(Boolean).join(' ');
+        const body = law.summary?.sections ? Object.values(law.summary.sections).join(' ') : '';
+        const selected = selectCategories(scoreCategories(title, body, allCategories));
+
+        if (!selected.length) {
+            const fallback = allCategories.find((c) => c.slug === DEFAULT_CATEGORY_SLUG);
+            return fallback ? [fallback] : [];
+        }
+        return selected;
+    }
 
     /**
      * Catégorise automatiquement une loi en fonction de son contenu
@@ -29,88 +48,39 @@ export class CategorizationService {
             return;
         }
 
-        // Si déjà catégorisée et pas de force update, skip
         if (!force && law.categories && law.categories.length > 0) {
             this.logger.log(`Law ${lawId} already categorized`);
             return;
         }
 
-        // Récupérer toutes les catégories
         const allCategories = await this.categoryRepository.find();
-
-        // Préparer le texte à analyser
-        const textToAnalyze = this.prepareTextForAnalysis(law);
-
-        // Détection par mots-clés
-        const detectedCategories = this.detectByKeywords(textToAnalyze, allCategories);
-
-        // Assigner les catégories (max 3)
-        const selectedCategories = detectedCategories.slice(0, 3);
-
-        if (selectedCategories.length === 0) {
-            // Fallback: assigner "Institutions" par défaut
-            const defaultCategory = allCategories.find(c => c.slug === 'institutions');
-            if (defaultCategory) {
-                selectedCategories.push(defaultCategory);
-            }
-        }
-
-        law.categories = selectedCategories;
+        law.categories = this.computeCategories(law, allCategories);
         await this.lawRepository.save(law);
 
-        this.logger.log(
-            `✅ Law "${law.titleOfficial}" categorized as: ${selectedCategories.map(c => c.name).join(', ')}`
-        );
+        this.logger.log(`✅ Law "${law.titleOfficial}" categorized as: ${law.categories.map((c) => c.name).join(', ')}`);
     }
 
     /**
-     * Prépare le texte de la loi pour l'analyse
+     * Catégorise les lois qui n'ont encore aucune catégorie (appelé par le cron quotidien,
+     * après la génération des résumés IA pour bénéficier de leur texte).
      */
-    private prepareTextForAnalysis(law: Law): string {
-        const parts: string[] = [];
+    async categorizeUncategorized(): Promise<{ categorized: number }> {
+        const uncategorized = await this.lawRepository
+            .createQueryBuilder('law')
+            .leftJoin('law.categories', 'category')
+            .where('category.id IS NULL')
+            .getMany();
 
-        if (law.titleOfficial) parts.push(law.titleOfficial);
-        if (law.titleVulgarized) parts.push(law.titleVulgarized);
-        if (law.summary?.sections) {
-            // Add all section values for analysis
-            Object.values(law.summary.sections).forEach(sectionText => {
-                parts.push(sectionText);
-            });
+        if (!uncategorized.length) return { categorized: 0 };
+
+        const allCategories = await this.categoryRepository.find();
+        for (const law of uncategorized) {
+            law.categories = this.computeCategories(law, allCategories);
+            await this.lawRepository.save(law);
         }
 
-        return parts.join(' ').toLowerCase();
-    }
-
-    /**
-     * Détecte les catégories par correspondance de mots-clés
-     */
-    private detectByKeywords(text: string, categories: Category[]): Category[] {
-        const scores: Array<{ category: Category; score: number }> = [];
-
-        for (const category of categories) {
-            const keywords = category.keywords.split(',').map(k => k.trim().toLowerCase());
-            let matchCount = 0;
-
-            for (const keyword of keywords) {
-                if (text.includes(keyword)) {
-                    matchCount++;
-                }
-            }
-
-            // Score basé simplement sur le nombre de mots-clés trouvés
-            // On ne divise plus par la longueur de la liste pour ne pas pénaliser les listes exhaustives
-            const score = matchCount;
-
-            if (score > 0) {
-                // Au moins un mot-clé trouvé
-                scores.push({ category, score });
-            }
-        }
-
-        // Trier par score décroissant
-        scores.sort((a, b) => b.score - a.score);
-
-        return scores.map(s => s.category);
+        this.logger.log(`✅ ${uncategorized.length} loi(s) catégorisée(s)`);
+        return { categorized: uncategorized.length };
     }
 
     /**
@@ -120,14 +90,13 @@ export class CategorizationService {
         this.logger.log('Starting to categorize all existing laws...');
 
         const laws = await this.lawRepository.find({ relations: ['categories'] });
-        let categorizedCount = 0;
+        const allCategories = await this.categoryRepository.find();
 
         for (const law of laws) {
-            // Force update pour tout le monde
-            await this.categorize(law.id, true);
-            categorizedCount++;
+            law.categories = this.computeCategories(law, allCategories);
+            await this.lawRepository.save(law);
         }
 
-        this.logger.log(`✅  Categorization complete: ${categorizedCount} laws categorized`);
+        this.logger.log(`✅  Categorization complete: ${laws.length} laws categorized`);
     }
 }
