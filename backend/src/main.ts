@@ -2,10 +2,14 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { createValidationPipe } from './common/validation';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     
+    // Validation globale des DTO (class-validator)
+    app.useGlobalPipes(createValidationPipe());
+
     // Prefix all API routes so they don't conflict with frontend
     app.setGlobalPrefix('api');
 

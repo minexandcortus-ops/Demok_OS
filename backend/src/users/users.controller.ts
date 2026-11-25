@@ -1,3 +1,4 @@
+import { UpdateFcmTokenDto, UpdateProfileDto } from './dto/update-profile.dto';
 import { Controller, Get, Patch, Delete, Body, UseGuards, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -97,15 +98,7 @@ export class UsersController {
     @Patch('profile')
     async updateProfile(
         @CurrentUser() user: User,
-        @Body() updateData: { 
-            email?: string; 
-            postalCode?: string; 
-            constituencyCode?: string;
-            notifyLawResults?: boolean;
-            notifyUpcomingLaws?: boolean;
-            notifySurveyResults?: boolean;
-            notifyNewSurveys?: boolean;
-        }
+        @Body() updateData: UpdateProfileDto
     ) {
         const citizen = await this.citizenRepository.findOne({
             where: { user: { id: user.id } },
@@ -191,7 +184,7 @@ export class UsersController {
     @Patch('fcm-token')
     async updateFcmToken(
         @CurrentUser() user: User,
-        @Body() body: { fcmToken: string }
+        @Body() body: UpdateFcmTokenDto
     ) {
         user.fcmToken = body.fcmToken;
         await this.userRepository.save(user);

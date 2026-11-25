@@ -4,6 +4,7 @@ import { OnboardingDto } from './dto/onboarding.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ResendOtpDto, VerifyOtpDto } from './dto/otp.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -35,12 +36,12 @@ export class AuthController {
     }
 
     @Post('verify-otp')
-    async verifyOtp(@Body() body: { userId: string; code: string }) {
+    async verifyOtp(@Body() body: VerifyOtpDto) {
         return this.authService.verifyOtp(body.userId, body.code);
     }
 
     @Post('resend-otp')
-    async resendOtp(@Body() body: { userId: string }) {
+    async resendOtp(@Body() body: ResendOtpDto) {
         return this.authService.resendOtp(body.userId);
     }
 }

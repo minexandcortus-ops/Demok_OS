@@ -8,6 +8,7 @@ import '../services/user_session.dart';
 import '../services/api_client.dart';
 import 'otp_screen.dart';
 import '../widgets/legal_dialogs.dart';
+import '../utils/validators.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -292,12 +293,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> with WidgetsBinding
         return;
 
       case OnboardingStep.postalCode:
+        final emailError = Validators.email(sanitizedInput);
+        if (emailError != null) {
+          _addBotMessage("$emailError. Peux-tu vérifier ?");
+          return;
+        }
         _email = sanitizedInput.toLowerCase();
         _currentStep = OnboardingStep.email;
-        _addBotMessage("Et maintenant, choisis un mot de passe sécurisé.");
+        _addBotMessage("Et maintenant, choisis un mot de passe sécurisé (au moins ${Validators.passwordMinLength} caractères).");
         break;
 
       case OnboardingStep.email:
+        final passwordError = Validators.password(input);
+        if (passwordError != null) {
+          _addBotMessage("$passwordError. Choisis-en un autre.");
+          return;
+        }
         _password = input;
         setState(() {
           _currentStep = OnboardingStep.readyToSubmit;

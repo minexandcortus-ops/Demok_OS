@@ -1,5 +1,11 @@
-export interface VoteDto {
+import { IsEnum, IsUUID } from 'class-validator';
+import { VoteChoice } from '../vote.types';
+
+export class VoteDto {
+    @IsUUID('4', { message: 'Identifiant de loi invalide' })
     lawId: string;
+
+    @IsEnum(VoteChoice, { message: 'Choix de vote invalide (FOR, AGAINST ou ABSTAIN)' })
     choice: 'FOR' | 'AGAINST' | 'ABSTAIN';
 }
 

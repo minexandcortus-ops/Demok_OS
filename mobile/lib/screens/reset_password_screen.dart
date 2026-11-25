@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../services/api_client.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import '../utils/validators.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String token;
@@ -23,8 +24,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     final password = _passwordController.text;
     final confirm = _confirmController.text;
 
-    if (password.isEmpty || password.length < 6) {
-      setState(() => _errorMessage = 'Le mot de passe doit faire au moins 6 caractères');
+    final passwordError = Validators.password(password);
+    if (passwordError != null) {
+      setState(() => _errorMessage = passwordError);
       return;
     }
 

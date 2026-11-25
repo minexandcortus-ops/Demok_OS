@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, BadRequestException, ParseUUIDPipe } from '@nestjs/common';
 import { SurveysService } from './surveys.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
@@ -23,7 +23,7 @@ export class SurveysController {
     @UseGuards(JwtAuthGuard)
     async vote(
         @CurrentUser() user: User,
-        @Body('candidateId') candidateId: string
+        @Body('candidateId', new ParseUUIDPipe({ version: '4' })) candidateId: string
     ) {
         if (!candidateId) {
             throw new BadRequestException('Candidate ID required');
