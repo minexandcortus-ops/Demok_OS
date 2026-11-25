@@ -5,6 +5,8 @@ import { HealthController } from './health.controller';
 import { AdminReportsController, AdminLawsController } from './admin-reports.controller';
 import { AdminPollsController } from './admin-polls.controller';
 import { AdminCandidatesController } from './admin-candidates.controller';
+import { AdminClassificationController } from './admin-classification.controller';
+import { CategoriesModule } from '../laws/categories.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
 import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
@@ -25,6 +27,7 @@ import { Candidate } from '../surveys/candidate.entity';
         ReportsModule,
         NotificationModule, // Expose NotificationService via ses exports
         SurveysModule,
+        CategoriesModule,
     ],
     controllers: [
         AdminIngestionController,
@@ -33,6 +36,7 @@ import { Candidate } from '../surveys/candidate.entity';
         AdminLawsController,
         AdminPollsController,
         AdminCandidatesController,
+        AdminClassificationController,
     ],
 })
 export class AdminModule { }

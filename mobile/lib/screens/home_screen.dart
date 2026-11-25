@@ -19,6 +19,7 @@ import '../widgets/android_install_banner.dart';
 import '../widgets/ios_install_banner.dart';
 import '../widgets/auth_prompt_modal.dart';
 import '../services/push_notification_service.dart';
+import '../widgets/law_filters_bar.dart';
 
 class HomeScreen extends StatelessWidget {
   final int initialTab;
@@ -45,6 +46,8 @@ class _HomeScreenContent extends StatefulWidget {
 class _HomeScreenContentState extends State<_HomeScreenContent> {
   List<Law> _laws = [];
   String? _selectedRegion;
+  int? _selectedCategoryId;
+  String? _selectedTerritory;
   String? _selectedStatus;
   String _sortBy = 'DESC';
   String _searchQuery = '';
@@ -238,6 +241,12 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
       }
       if (_selectedStatus != null) {
         queryParameters.add('status=$_selectedStatus');
+      }
+      if (_selectedCategoryId != null) {
+        queryParameters.add('categories=$_selectedCategoryId');
+      }
+      if (_selectedTerritory != null) {
+        queryParameters.add('territory=$_selectedTerritory');
       }
       if (_showVotedOnly) {
         queryParameters.add('votedOnly=true');
@@ -483,6 +492,19 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
                   onChanged: _onSearchChanged,
                 ),
               ),
+            ),
+          if (_selectedTabIndex == 0)
+            LawFiltersBar(
+              selectedCategoryId: _selectedCategoryId,
+              selectedTerritory: _selectedTerritory,
+              onCategoryChanged: (id) {
+                setState(() => _selectedCategoryId = id);
+                _fetchLaws(refresh: true);
+              },
+              onTerritoryChanged: (code) {
+                setState(() => _selectedTerritory = code);
+                _fetchLaws(refresh: true);
+              },
             ),
           Expanded(
             child: _isLoading

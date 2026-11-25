@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../widgets/report_error_dialog.dart';
 import '../widgets/law_deep_dive_dialog.dart';
 import '../widgets/auth_prompt_modal.dart';
+import '../widgets/law_filters_bar.dart';
 
 class LawDetailScreen extends StatelessWidget {
   final Law law;
@@ -1396,6 +1397,8 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
           ),
           
           const SizedBox(height: 20),
+
+          LawClassificationChips(categories: widget.law.categories, territories: widget.law.territories),
           
           // Details Grid
           SizedBox(

@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
+import { AiService } from '../ai/ai.service';
 import { Law } from '../laws/law.entity';
 import { Amendement, AmendementStatut } from '../laws/amendement.entity';
 import * as he from 'he';
@@ -25,6 +26,7 @@ export class AmendementIngestionService {
         private readonly amendementRepository: Repository<Amendement>,
         @InjectRepository(Law)
         private readonly lawRepository: Repository<Law>,
+        private readonly aiService: AiService,
     ) { }
 
     /** Extrait l'ID numérique AN: "AN_DLR5L17N52985" → "52985" */
@@ -144,10 +146,7 @@ export class AmendementIngestionService {
      * 2. Si statut ADOPTE/REJETE : Appelle Mistral → 1 phrase neutre et factuelle (s'il n'y a pas déjà de résumé).
      */
     private async enrichWithMistral(amendements: Amendement[]): Promise<void> {
-        const mistralApiKey = this.configService.get<string>('MISTRAL_API_KEY');
-        const mistralModel = this.configService.get<string>('MISTRAL_MODEL', 'mistral-small-latest');
-
-        if (!mistralApiKey) {
+        if (!this.aiService.isConfigured()) {
             this.logger.warn('⚠️ MISTRAL_API_KEY non configurée, enrichissement ignoré.');
             return;
         }
@@ -179,10 +178,10 @@ export class AmendementIngestionService {
                 }
 
                 if (rawText && rawText.length > 20 && this.needsResume(amendement.statut) && !amendement.resume) {
-                    if (!mistralApiKey) {
+                    if (!this.aiService.isConfigured()) {
                         this.logger.warn(`⚠️ Pas de clé Mistral, résumé ignoré pour ${amendement.externalId}`);
                     } else {
-                        const resume = await this.callMistral(rawText, mistralApiKey, mistralModel);
+                        const resume = await this.callMistral(rawText);
                         if (resume) {
                             amendement.resume = resume;
                             needSave = true;
@@ -225,18 +224,11 @@ export class AmendementIngestionService {
             .substring(0, 2000);
     }
 
-    private async callMistral(rawText: string, apiKey: string, model: string): Promise<string | null> {
+    private async callMistral(rawText: string): Promise<string | null> {
         try {
             const prompt = `Voici le texte d'un amendement parlementaire français :\n\n${rawText}\n\nEn une seule phrase courte et factuelle (15 à 25 mots maximum), décris ce que propose cet amendement sur le plan légal, sans jugement de valeur ni positionnement politique. Ne commence pas par "Cet amendement". Réponds uniquement avec la phrase, sans guillemets.`;
-
-            const resp = await firstValueFrom(
-                this.httpService.post(
-                    'https://api.mistral.ai/v1/chat/completions',
-                    { model, max_tokens: 80, temperature: 0.2, messages: [{ role: 'user', content: prompt }] },
-                    { headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, timeout: 30000 }
-                )
-            );
-            return resp.data?.choices?.[0]?.message?.content?.trim() || null;
+            const content = await this.aiService.chat({ user: prompt, maxTokens: 80, temperature: 0.2 });
+            return content.trim() || null;
         } catch (e) {
             this.logger.error(`❌ Mistral : ${e.message}`);
             return null;

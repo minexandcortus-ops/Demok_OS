@@ -103,6 +103,18 @@ export class Law {
     })
     categories: Category[];
 
+    /** Axe territoire (codes de laws/taxonomy.ts → Territory). Vide = pas encore classée. */
+    @Column('text', { array: true, default: () => "'{}'" })
+    territories: string[];
+
+    /** Classification figée par un administrateur : ni l'IA ni les mots-clés ne la modifient. */
+    @Column({ default: false })
+    categoriesLocked: boolean;
+
+    /** Origine de la classification : AI, KEYWORDS ou MANUAL */
+    @Column({ type: 'varchar', length: 16, nullable: true })
+    classificationSource: 'AI' | 'KEYWORDS' | 'MANUAL' | null;
+
     @OneToMany(() => Amendement, amendement => amendement.law)
     amendements: Amendement[];
 

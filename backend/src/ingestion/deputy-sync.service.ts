@@ -5,7 +5,7 @@ import { Deputy } from '../votes/deputy.entity';
 import axios from 'axios';
 import * as fs from 'fs';
 import { join } from 'path';
-import { Mistral } from '@mistralai/mistralai';
+import { AiService } from '../ai/ai.service';
 import * as AdmZip from 'adm-zip';
 
 @Injectable()
@@ -15,6 +15,7 @@ export class DeputySyncService {
     constructor(
         @InjectRepository(Deputy)
         private readonly deputyRepository: Repository<Deputy>,
+        private readonly aiService: AiService,
     ) {}
 
     async syncDeputiesFromNosDeputes() {
@@ -111,17 +112,12 @@ export class DeputySyncService {
                     const rawBio = clairData || fallbackBio;
 
                     // Si on a Mistral configuré, on génère une belle biographie en 2 parties
-                    if (process.env.MISTRAL_API_KEY) {
+                    if (this.aiService.isConfigured()) {
                         try {
-                            const mistral = new Mistral({ apiKey: process.env.MISTRAL_API_KEY });
-                            const chatResponse = await mistral.chat.complete({
-                                model: 'mistral-small-latest',
-                                messages: [{
-                                    role: 'user', 
-                                    content: `À partir des informations suivantes sur un député, rédige une biographie claire et engageante pour une application citoyenne.\nStructure ta réponse en exactement DEUX sections avec les titres exacts suivants en majuscules (n'utilise pas de Markdown ni de gras, juste les majuscules et des sauts de ligne) :\n\nRÉSUMÉ ET PARCOURS\n(Rédige ici un paragraphe de 3-4 phrases sur son historique et sa profession)\n\nENGAGEMENTS ET FAITS NOTABLES\n(Rédige ici un paragraphe de 3-4 phrases sur ses combats politiques, prises de position et son influence à l'Assemblée)\n\nVoici les informations brutes :\n${rawBio}` 
-                                }],
+                            const shortBio = await this.aiService.chat({
+                                user: `À partir des informations suivantes sur un député, rédige une biographie claire et engageante pour une application citoyenne.\nStructure ta réponse en exactement DEUX sections avec les titres exacts suivants en majuscules (n'utilise pas de Markdown ni de gras, juste les majuscules et des sauts de ligne) :\n\nRÉSUMÉ ET PARCOURS\n(Rédige ici un paragraphe de 3-4 phrases sur son historique et sa profession)\n\nENGAGEMENTS ET FAITS NOTABLES\n(Rédige ici un paragraphe de 3-4 phrases sur ses combats politiques, prises de position et son influence à l'Assemblée)\n\nVoici les informations brutes :\n${rawBio}`,
+                                maxTokens: 600,
                             });
-                            const shortBio = chatResponse.choices?.[0]?.message?.content;
                             if (typeof shortBio === 'string') {
                                 deputy.bio = shortBio.trim();
                             } else {

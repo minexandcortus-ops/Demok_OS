@@ -954,6 +954,72 @@
   }
 
   // ── Laws management ──
+  const TERRITORY_OPTIONS = {
+    NATIONAL: 'National', METROPOLE: 'Métropole', OUTRE_MER: 'Outre-mer (général)', GUADELOUPE: 'Guadeloupe',
+    MARTINIQUE: 'Martinique', GUYANE: 'Guyane', REUNION: 'La Réunion', MAYOTTE: 'Mayotte',
+    NOUVELLE_CALEDONIE: 'Nouvelle-Calédonie', POLYNESIE: 'Polynésie française', SPM: 'Saint-Pierre-et-Miquelon',
+    WALLIS_FUTUNA: 'Wallis-et-Futuna', SAINT_MARTIN: 'Saint-Martin', SAINT_BARTHELEMY: 'Saint-Barthélemy',
+    CORSE: 'Corse', UE: 'Union européenne', INTERNATIONAL: 'International',
+  };
+  let themeOptionsCache = null;
+
+  async function openClassificationEditor(law) {
+    if (!themeOptionsCache) {
+      try { themeOptionsCache = await (await fetch(`${API_BASE}/categories`)).json(); }
+      catch (e) { showToast('Thèmes indisponibles', 'error'); return; }
+    }
+    document.getElementById('classification-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    overlay.id = 'classification-overlay';
+    overlay.style.display = 'flex';
+    overlay.innerHTML = `
+      <div class="confirm-box" style="max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto;">
+        <h3>Classification de la loi</h3>
+        <p style="font-size: 12px; color: var(--text-muted);">Source actuelle : ${escapeHtml(law.source || 'aucune')}. Cochez 1 à 3 thèmes, dans l'ordre d'importance (le premier coché est le thème principal).</p>
+        <div id="cls-themes" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px;">
+          ${themeOptionsCache.map(c => `<label style="font-size: 13px;"><input type="checkbox" value="${escapeHtml(c.slug)}" onchange="trackThemeOrder(this)" /> ${escapeHtml(c.icon)} ${escapeHtml(c.name)}</label>`).join('')}
+        </div>
+        <div style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Territoires</div>
+        <div id="cls-territories" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px;">
+          ${Object.entries(TERRITORY_OPTIONS).map(([code, label]) => `<label style="font-size: 13px;"><input type="checkbox" value="${code}" ${law.territories.includes(code) ? 'checked' : ''} /> ${escapeHtml(label)}</label>`).join('')}
+        </div>
+        <label style="font-size: 13px; display: block; margin-bottom: 16px;"><input type="checkbox" id="cls-locked" checked /> Verrouiller (l'IA et les mots-clés ne la modifieront plus)</label>
+        <div class="confirm-actions">
+          <button class="btn-cancel" onclick="document.getElementById('classification-overlay').remove()">Annuler</button>
+          <button class="btn-primary" style="width: auto;" onclick="submitClassification('${escapeHtml(law.id)}')">Enregistrer</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    window.__themeOrder = [];
+  }
+
+  function trackThemeOrder(input) {
+    window.__themeOrder = (window.__themeOrder || []).filter(s => s !== input.value);
+    if (input.checked) window.__themeOrder.push(input.value);
+  }
+
+  async function submitClassification(lawId) {
+    const categorySlugs = window.__themeOrder || [];
+    const territories = [...document.querySelectorAll('#cls-territories input:checked')].map(i => i.value);
+    if (categorySlugs.length < 1 || categorySlugs.length > 3) { showToast('Choisissez entre 1 et 3 thèmes', 'error'); return; }
+    try {
+      const res = await fetch(`${API_BASE}/admin/laws/${lawId}/classification`, {
+        method: 'PATCH',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categorySlugs, territories, locked: document.getElementById('cls-locked').checked }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast('Classification enregistrée', 'success');
+        document.getElementById('classification-overlay').remove();
+        searchLaws();
+      } else {
+        showToast(Array.isArray(data.message) ? data.message.join(' · ') : (data.message || 'Erreur'), 'error');
+      }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+  }
+
   async function searchLaws(isLoadMore = false) {
     const q = document.getElementById('law-search-input').value.trim();
     const status = document.getElementById('law-status-filter').value;
@@ -1010,6 +1076,7 @@
               <button class="btn-law-status btn-rejected" onclick="confirmLawStatus('${law.id}', 'REJECTED', '${escapeHtml(law.titleVulgarized || law.titleOfficial).replace(/'/g, "\\'")}')">❌ Rejetée</button>
               <button class="btn-law-status" style="border-color:var(--accent); color:var(--accent); background:rgba(79,124,255,0.05); margin-left:auto;" onclick="openLinkEditor('${law.id}')">🔗 ${law.officialUrl ? 'Modifier Lien' : 'Ajouter Lien'}</button>
               <button class="btn-law-status" style="border-color:var(--accent); color:var(--accent); background:rgba(79,124,255,0.05);" onclick="openVoteEditor('${law.id}')">⚙️ Éditer Vote</button>
+              <button class="btn-law-status" style="border-color:var(--accent); color:var(--accent); background:rgba(79,124,255,0.05);" onclick='openClassificationEditor(${JSON.stringify({ id: law.id, territories: law.territories || [], locked: !!law.categoriesLocked, source: law.classificationSource || null }).replace(/'/g, "&#39;")})'>🏷️ Classer${law.categoriesLocked ? ' 🔒' : ''}</button>
             </div>
           </div>
         </div>

@@ -102,7 +102,7 @@ export class AdminLawsController {
 
         const [laws, total] = await this.lawRepository.findAndCount({
             where,
-            select: ['id', 'externalId', 'titleOfficial', 'titleVulgarized', 'status', 'voteDate', 'deputyVoteResult', 'officialUrl'],
+            select: ['id', 'externalId', 'titleOfficial', 'titleVulgarized', 'status', 'voteDate', 'deputyVoteResult', 'officialUrl', 'territories', 'categoriesLocked', 'classificationSource'],
             order: { voteDate: { direction: 'DESC', nulls: 'LAST' }, id: 'ASC' },
             take,
             skip,

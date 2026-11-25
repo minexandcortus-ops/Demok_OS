@@ -3,6 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { Law } from '../laws/law.entity';
 import { ConfigService } from '@nestjs/config';
+import { Category } from '../laws/category.entity';
+import { CategorizationService } from '../laws/categorization.service';
+import { buildClassificationInstructions } from '../laws/taxonomy';
+import { AiService } from '../ai/ai.service';
+import { condenseLegalText } from '../ai/ai-text';
 
 @Injectable()
 export class SummaryUpdaterService {
@@ -12,6 +17,10 @@ export class SummaryUpdaterService {
         @InjectRepository(Law)
         private lawRepository: Repository<Law>,
         private configService: ConfigService,
+        @InjectRepository(Category)
+        private categoryRepository: Repository<Category>,
+        private categorizationService: CategorizationService,
+        private aiService: AiService,
     ) { }
 
     /**
@@ -48,10 +57,9 @@ export class SummaryUpdaterService {
         };
 
         // PHASE 3 : Code réel avec Mistral AI
-        const mistralApiKey = this.configService.get<string>('MISTRAL_API_KEY');
-        const mistralModel = this.configService.get<string>('MISTRAL_MODEL', 'mistral-small-latest');
+        const mistralModel = this.aiService.model;
 
-        if (!mistralApiKey) {
+        if (!this.aiService.isConfigured()) {
             this.logger.warn('⚠️ MISTRAL_API_KEY non configurée, résumé mock utilisé');
             defaultSummary.sections['R\u00e9sum\u00e9'] = `Cette loi a \u00e9t\u00e9 mise \u00e0 jour le ${new Date().toLocaleDateString('fr-FR')}. Contenu principal : ${law.titleOfficial}.`;
             law.summary = defaultSummary;
@@ -59,22 +67,13 @@ export class SummaryUpdaterService {
             return;
         }
 
+        const allCategories = await this.categoryRepository.find();
+
         try {
             this.logger.log(`🔄 Appel Mistral AI (modèle: ${mistralModel}) pour titre et résumé (Classique + Mode Rue)...`);
 
-            const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${mistralApiKey}`,
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: mistralModel,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: `Tu es un expert législatif et vulgarisateur pour l'application citoyenne Démok.
+            const content = await this.aiService.chat({
+                system: `Tu es un expert législatif et vulgarisateur pour l'application citoyenne Démok.
 Ta tâche est d'analyser un texte de loi et de produire DEUX versions de vulgarisation :
 1) Une version "classique" : neutre, claire, factuelle et accessible au grand public (style institutionnel vulgarisé).
 2) Une version "rue" : en langage urbain / argot des cités moderne, débridé, dynamique et percutant, tout en restant 100% fidèle au fond de la loi, impartial et sans inventer de fausses informations.
@@ -110,24 +109,12 @@ Réponds UNIQUEMENT avec un objet JSON valide suivant scrupuleusement cette stru
         }
     }
 }
-Sois parfaitement objectif et équilibré sur le fond juridique dans les deux versions.`,
-                        },
-                        {
-                            role: 'user',
-                            content: `Analyse ce texte :\nTitre officiel : ${law.titleOfficial}\nContenu brut : ${law.rawText ? law.rawText.substring(0, 4000) : (law.titleVulgarized || law.titleOfficial)}`,
-                        },
-                    ],
-                    response_format: { type: "json_object" },
-                    max_tokens: 1800,
-                }),
+Sois parfaitement objectif et équilibré sur le fond juridique dans les deux versions.
+${buildClassificationInstructions(allCategories)}`,
+                user: `Analyse ce texte :\nTitre officiel : ${law.titleOfficial}\nContenu brut : ${law.rawText ? condenseLegalText(law.rawText) : (law.titleVulgarized || law.titleOfficial)}`,
+                json: true,
+                maxTokens: 2000,
             });
-
-            if (!response.ok) {
-                throw new Error(`Mistral API error: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            const content = data.choices[0].message.content;
 
             // Parsing de la réponse JSON
             let aiResult: any;
@@ -153,6 +140,11 @@ Sois parfaitement objectif et équilibré sur le fond juridique dans les deux ve
             };
 
             const rue = aiResult.rue;
+
+            // Classification thème × territoire (même appel IA, validée contre la taxonomie fermée)
+            if (this.categorizationService.applyAiClassification(law, aiResult.classification, allCategories)) {
+                this.logger.log(`🏷️ Classification IA : ${law.categories.map((c) => c.slug).join(', ')} · ${law.territories.join(', ')}`);
+            }
 
             this.logger.log(`✅ Résumé IA Classique généré (${classique?.resume?.length || 0} chars)`);
 

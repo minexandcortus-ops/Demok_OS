@@ -7,6 +7,7 @@ import { AmendementIngestionService } from '../ingestion/amendement-ingestion.se
 import { DocumentIngestionService } from '../ingestion/document-ingestion.service';
 import { PromulgationSyncService } from '../ingestion/promulgation-sync.service';
 import { CandidatesSyncService } from '../surveys/candidates-sync.service';
+import { CategorizationService } from '../laws/categorization.service';
 
 import { NotificationService } from '../notifications/notification.service';
 
@@ -23,6 +24,7 @@ export class IngestionSchedulerService {
         private promulgationSyncService: PromulgationSyncService,
         private notificationService: NotificationService,
         private candidatesSyncService: CandidatesSyncService,
+        private categorizationService: CategorizationService,
     ) { }
 
     /**
@@ -105,6 +107,11 @@ export class IngestionSchedulerService {
             this.logger.log('🤖 Étape 4/6 : Génération résumés IA pour nouvelles lois...');
             const mistralResult = await this.summaryUpdaterService.updateRecentSummaries();
             this.logger.log(`✅ Mistral terminé : ${mistralResult.processed} lois traitées, ${mistralResult.skipped} ignorées`);
+
+            // Étape 3.5 : Catégorisation des nouvelles lois (après l'IA pour profiter des résumés)
+            this.logger.log('🏷️ Catégorisation des lois sans catégorie...');
+            const categorizationResult = await this.categorizationService.categorizeUncategorized();
+            this.logger.log(`✅ Catégorisation : ${categorizationResult.categorized} loi(s)`);
 
             // Étape 4 : Re-sync des amendements pour toutes les lois à l'agenda
             // (fire-and-forget : ne bloque pas le retour du cron si Mistral est lent)
