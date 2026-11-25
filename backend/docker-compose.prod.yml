@@ -25,6 +25,7 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - SMTP_FROM=${SMTP_FROM}
       - FRONTEND_URL=${FRONTEND_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://demok.fr,https://www.demok.fr,https://demok-ba1a1.web.app,https://demok-ba1a1.firebaseapp.com}
       - ADMIN_KEY=${ADMIN_KEY}
       - VOTE_SECRET=${VOTE_SECRET}
     volumes:

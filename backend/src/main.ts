@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { buildCorsOrigin } from './common/cors';
 
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -11,7 +12,7 @@ async function bootstrap() {
 
     // Enable CORS
     app.enableCors({
-        origin: true,
+        origin: buildCorsOrigin(),
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         allowedHeaders: 'Content-Type, Accept, Authorization, x-admin-key, Cache-Control, Pragma, Expires, Bypass-Tunnel-Reminder',
         credentials: true,
