@@ -7,7 +7,14 @@ class Candidate {
   final String? photoUrl;
   final String? partyLogoUrl;
   final String? description;
+  /// Fiche de synthèse tierce (pas le programme officiel)
   final String? programUrl;
+  final String status;
+  final String? officialSiteUrl;
+  final String? officialProgramUrl;
+  final String programStatus;
+  final DateTime? programPublishedAt;
+  final DateTime? linksCheckedAt;
 
   Candidate({
     required this.id,
@@ -17,6 +24,12 @@ class Candidate {
     this.partyLogoUrl,
     this.description,
     this.programUrl,
+    this.status = 'DECLARE',
+    this.officialSiteUrl,
+    this.officialProgramUrl,
+    this.programStatus = 'NON_PUBLIE',
+    this.programPublishedAt,
+    this.linksCheckedAt,
   });
 
   factory Candidate.fromJson(Map<String, dynamic> json) {
@@ -28,7 +41,50 @@ class Candidate {
       partyLogoUrl: json['partyLogoUrl'],
       description: json['description'],
       programUrl: json['programUrl'],
+      status: json['status'] ?? 'DECLARE',
+      officialSiteUrl: _nonEmpty(json['officialSiteUrl']),
+      officialProgramUrl: _nonEmpty(json['officialProgramUrl']),
+      programStatus: json['programStatus'] ?? 'NON_PUBLIE',
+      programPublishedAt: _date(json['programPublishedAt']),
+      linksCheckedAt: _date(json['linksCheckedAt']),
     );
+  }
+
+  static String? _nonEmpty(dynamic value) =>
+      value is String && value.trim().isNotEmpty ? value.trim() : null;
+
+  static DateTime? _date(dynamic value) => value is String ? DateTime.tryParse(value) : null;
+
+  /// Libellé du statut de candidature (null = rien à afficher).
+  String? get statusLabel => switch (status) {
+        'OFFICIEL' => 'Candidature officielle',
+        'PRESSENTI' => 'Candidature pressentie',
+        'RETIRE' => 'Candidature retirée',
+        _ => null,
+      };
+
+  bool get hasOfficialProgram => officialProgramUrl != null;
+
+  /// Libellé de l'état du programme lorsqu'aucun lien officiel n'est disponible.
+  String get programStatusLabel => switch (programStatus) {
+        'PUBLIE' => 'Programme publié',
+        'PARTIEL' => 'Programme partiel',
+        _ => 'Programme non publié',
+      };
+
+  /// Domaine de la fiche de synthèse tierce, affiché pour la transparence de la source.
+  String? get summarySourceHost {
+    if (programUrl == null || programUrl!.isEmpty) return null;
+    final host = Uri.tryParse(programUrl!)?.host ?? '';
+    return host.isEmpty ? null : host.replaceFirst(RegExp(r'^www\.'), '');
+  }
+
+  /// Résout un lien éventuellement relatif à l'API (fichiers déposés via l'admin).
+  static String resolveLink(String url) {
+    if (url.startsWith('/api')) {
+      return Env.apiUrl.replaceAll(RegExp(r'/api$'), '') + url;
+    }
+    return url;
   }
 
   bool get isNetworkLogo => partyLogoUrl != null && (partyLogoUrl!.startsWith('http') || partyLogoUrl!.startsWith('/api'));

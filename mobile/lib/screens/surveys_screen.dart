@@ -7,7 +7,8 @@ import '../services/user_session.dart';
 import '../theme/app_colors.dart';
 import '../services/api_client.dart';
 import '../widgets/auth_prompt_modal.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../widgets/candidate_links.dart';
+import '../widgets/candidate_positions.dart';
 
 class SurveysScreen extends StatefulWidget {
   const SurveysScreen({Key? key}) : super(key: key);
@@ -713,24 +714,11 @@ class _SurveysScreenState extends State<SurveysScreen> {
 
                       const SizedBox(height: 20),
 
-                      // Bouton Programme
-                      if (candidate.programUrl != null && candidate.programUrl!.isNotEmpty)
-                        OutlinedButton.icon(
-                          onPressed: () async {
-                            final url = Uri.parse(candidate.programUrl!);
-                            if (await canLaunchUrl(url)) {
-                              await launchUrl(url);
-                            }
-                          },
-                          icon: const Icon(Icons.public, size: 20),
-                          label: const Text("Voir le programme"),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primaryBlue,
-                            side: const BorderSide(color: AppColors.primaryBlue),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
+                      // Programme officiel, site de campagne et fiche de synthèse
+                      CandidateLinks(candidate: candidate),
+
+                      // Positions sourcées du candidat sur les lois
+                      CandidateLawPositionsList(candidateId: candidate.id),
 
                       const SizedBox(height: 16),
 
@@ -932,15 +920,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
   Widget _buildResultCard(Map<String, dynamic> result) {
     final percentage = (result['percentage'] as num).toDouble();
     // Create a temporary candidate object to reuse logoPath logic
-    final candidate = Candidate(
-      id: result['candidateId'] ?? '',
-      name: result['name'],
-      party: result['party'],
-      photoUrl: result['photoUrl'],
-      description: result['description'],
-      programUrl: result['programUrl'],
-      partyLogoUrl: result['partyLogoUrl'],
-    );
+    final candidate = Candidate.fromJson({...result, 'id': result['candidateId'] ?? ''});
 
     return InkWell(
       onTap: () => _showCandidateDetail(candidate),

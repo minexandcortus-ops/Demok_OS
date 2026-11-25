@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, ParseUUIDPipe, ValidationPipe } from '@nestjs/common';
+import { CandidateDto, prepareCandidateUpdate } from './dto/candidate.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Candidate } from '../surveys/candidate.entity';
@@ -22,6 +23,8 @@ const storage = diskStorage({
         cb(null, file.fieldname + '-' + uniqueSuffix + extname(file.originalname));
     }
 });
+
+const CANDIDATE_PIPE = new ValidationPipe({ whitelist: true, transform: true });
 
 @UseGuards(AdminKeyGuard)
 @Controller('admin/candidates')
@@ -49,16 +52,17 @@ export class AdminCandidatesController {
     }
 
     @Post()
-    async create(@Body() body: any) {
-        // Find max displayOrder if order matters, though user said alphabetical
-        // We'll just set it to 0
-        const candidate = this.candidateRepository.create({ ...body, displayOrder: 0 });
+    async create(@Body(CANDIDATE_PIPE) body: CandidateDto) {
+        if (!body.name || !body.party) {
+            throw new BadRequestException('Nom et parti requis');
+        }
+        const candidate = this.candidateRepository.create({ ...prepareCandidateUpdate(body), displayOrder: 0 });
         return this.candidateRepository.save(candidate);
     }
 
     @Put(':id')
-    async update(@Param('id') id: string, @Body() body: any) {
-        await this.candidateRepository.update(id, body);
+    async update(@Param('id', new ParseUUIDPipe()) id: string, @Body(CANDIDATE_PIPE) body: CandidateDto) {
+        await this.candidateRepository.update(id, prepareCandidateUpdate(body));
         return this.candidateRepository.findOneBy({ id });
     }
 

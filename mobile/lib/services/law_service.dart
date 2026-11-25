@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'user_session.dart';
 import 'api_client.dart';
+import '../models/group_vote.dart';
+import '../models/candidate_position.dart';
 
 class LawService {
   /// Toggles the favorite status of a law for the current user.
@@ -20,5 +22,34 @@ class LawService {
     } else {
       throw Exception('Failed to toggle favorite: ${response.body}');
     }
+  }
+
+  /// Vote de chaque groupe politique sur une loi (liste vide si non disponible).
+  static Future<List<GroupVote>> fetchGroupVotes(String lawId) async {
+    final response = await ApiClient.get('/votes/laws/$lawId/groups');
+    if (response.statusCode != 200) return [];
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return (data['groups'] as List<dynamic>? ?? [])
+        .map((g) => GroupVote.fromJson(g as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Position de chaque candidat à la présidentielle sur une loi.
+  static Future<List<CandidateOnLaw>> fetchCandidatePositions(String lawId) async {
+    final response = await ApiClient.get('/votes/laws/$lawId/candidate-positions');
+    if (response.statusCode != 200) return [];
+    return (jsonDecode(response.body) as List<dynamic>)
+        .map((e) => CandidateOnLaw.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Positions connues d'un candidat, loi par loi.
+  static Future<List<LawOfCandidate>> fetchPositionsOfCandidate(String candidateId) async {
+    final response = await ApiClient.get('/surveys/presidential/candidates/$candidateId/positions');
+    if (response.statusCode != 200) return [];
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return (data['positions'] as List<dynamic>? ?? [])
+        .map((e) => LawOfCandidate.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

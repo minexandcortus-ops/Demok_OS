@@ -618,10 +618,50 @@
 
         <div style="margin-bottom: 12px; display: flex; gap: 12px;">
           <div style="flex: 1;">
-            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Lien du programme (Lien web ou PDF)</label>
+            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Fiche de synthèse tierce (lien web ou PDF)</label>
             <input type="text" id="candidate-programUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="URL du programme" />
             <input type="file" id="candidate-programFile" accept="application/pdf, image/*" style="font-size: 12px; color: var(--text-muted);" />
           </div>
+        </div>
+
+        <div style="margin-bottom: 12px; padding: 12px; border: 1px solid var(--border, #333); border-radius: 8px;">
+          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">Liens officiels (vérifiés manuellement)</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+              <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Statut de candidature</label>
+              <select id="candidate-status" class="admin-input" style="width: 100%">
+                <option value="PRESSENTI">Pressenti(e)</option>
+                <option value="DECLARE" selected>Déclaré(e)</option>
+                <option value="OFFICIEL">Officiel (liste du Conseil constitutionnel)</option>
+                <option value="RETIRE">Retiré(e)</option>
+                <option value="MASQUE">Masqué (non affiché)</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">État du programme</label>
+              <select id="candidate-programStatus" class="admin-input" style="width: 100%">
+                <option value="NON_PUBLIE" selected>Non publié</option>
+                <option value="PARTIEL">Partiel</option>
+                <option value="PUBLIE">Publié</option>
+              </select>
+            </div>
+          </div>
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Site officiel de campagne (https://…)</label>
+          <input type="text" id="candidate-officialSiteUrl" class="admin-input" style="width: 100%; margin-bottom: 8px;" placeholder="https://…" />
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Programme officiel (https://… ou PDF)</label>
+          <input type="text" id="candidate-officialProgramUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="https://…" />
+          <input type="file" id="candidate-officialProgramFile" accept="application/pdf" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;" />
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Date de publication du programme</label>
+          <input type="date" id="candidate-programPublishedAt" class="admin-input" style="width: 100%" />
+        </div>
+
+        <div style="margin-bottom: 12px; padding: 12px; border: 1px solid var(--border, #333); border-radius: 8px;">
+          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">Lien avec les votes à l'Assemblée</div>
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Député correspondant (si le candidat est ou a été député)</label>
+          <input type="text" id="candidate-deputySearch" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="Rechercher un député par nom…" oninput="searchCandidateDeputy(this.value)" />
+          <select id="candidate-deputyId" class="admin-input" style="width: 100%; margin-bottom: 8px;"><option value="">— Aucun —</option></select>
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Groupe AN de sa formation (code d'organe, ex. PO845401)</label>
+          <input type="text" id="candidate-groupOrganeRef" class="admin-input" style="width: 100%" placeholder="PO…" />
         </div>
 
         <div style="margin-bottom: 24px;">
@@ -635,6 +675,41 @@
         </div>
       </div>
     </div>
+
+<!-- ── CANDIDATE POSITIONS SECTION ── -->
+    <hr class="section-divider" />
+    <div class="toolbar">
+      <h2>🧭 Positions des candidats sur les lois</h2>
+      <button class="filter-btn" onclick="loadCandidatePositions()" style="margin-left: auto;">↻ Actualiser</button>
+    </div>
+    <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 12px;">
+      Uniquement des positions <strong>déclarées et sourcées</strong> (déclaration publique ou programme), vérifiées manuellement.
+      Les votes de député et de groupe sont déduits automatiquement. Ne jamais saisir une position supposée ou générée par IA.
+    </p>
+    <div class="report-card" style="margin-bottom: 16px;">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+        <select id="pos-candidate" class="admin-input" style="flex: 1; min-width: 200px;"><option value="">Candidat…</option></select>
+        <input type="text" id="pos-law-search" class="admin-input" style="flex: 2; min-width: 240px;" placeholder="Rechercher une loi…" oninput="searchPositionLaw(this.value)" />
+      </div>
+      <select id="pos-law" class="admin-input" style="width: 100%; margin-bottom: 8px;"><option value="">Loi…</option></select>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+        <select id="pos-position" class="admin-input" style="flex: 1;">
+          <option value="POUR">Pour</option><option value="CONTRE">Contre</option>
+          <option value="ABSTENTION">Abstention</option><option value="NUANCE">Nuancé</option>
+        </select>
+        <select id="pos-sourceType" class="admin-input" style="flex: 1;">
+          <option value="DECLARATION">Déclaration publique</option><option value="PROGRAMME">Programme</option>
+        </select>
+        <input type="date" id="pos-sourceDate" class="admin-input" style="flex: 1;" />
+      </div>
+      <input type="text" id="pos-sourceUrl" class="admin-input" style="width: 100%; margin-bottom: 8px;" placeholder="URL de la source (https://…) — obligatoire" />
+      <textarea id="pos-quote" class="admin-input" maxlength="300" style="width: 100%; height: 60px; margin-bottom: 8px;" placeholder="Citation exacte (300 caractères max.)"></textarea>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <input type="text" id="pos-verifiedBy" class="admin-input" style="flex: 1;" placeholder="Vérifié par (initiales)" />
+        <button class="btn-primary" style="width: auto;" onclick="submitCandidatePosition()">Enregistrer la position</button>
+      </div>
+    </div>
+    <div id="positions-results" class="reports-list"></div>
 
 <!-- ── POLLS SECTION ── -->
     <hr class="section-divider" />
@@ -843,6 +918,7 @@
       renderReports(currentFilter);
       searchLaws();
       loadPolls();
+      loadCandidatePositions();
 
     } catch (e) {
       showToast(`Erreur de connexion au serveur: ${e.message}`, 'error');
@@ -1305,6 +1381,100 @@
   }
 
   // ── CANDIDATES MANAGEMENT ──
+  const POSITION_LABELS = { POUR: 'Pour', CONTRE: 'Contre', ABSTENTION: 'Abstention', NUANCE: 'Nuancé' };
+
+  async function loadCandidatePositions() {
+    const container = document.getElementById('positions-results');
+    try {
+      const [candRes, posRes] = await Promise.all([
+        fetch(`${API_BASE}/admin/candidates`, { headers: { 'x-admin-key': adminKey } }),
+        fetch(`${API_BASE}/admin/candidate-positions`, { headers: { 'x-admin-key': adminKey } }),
+      ]);
+      const candidates = await candRes.json();
+      const positions = await posRes.json();
+
+      const select = document.getElementById('pos-candidate');
+      const current = select.value;
+      select.innerHTML = '<option value="">Candidat…</option>' + candidates.map(c =>
+        `<option value="${escapeHtml(c.id)}" ${c.id === current ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('');
+
+      container.innerHTML = positions.length === 0
+        ? '<div class="empty-state"><p>Aucune position déclarée.</p></div>'
+        : positions.map(p => `
+          <div class="report-card">
+            <div class="report-header">
+              <div class="report-meta">
+                <span style="font-weight: bold;">${escapeHtml(p.candidate?.name || '?')}</span>
+                <span class="badge badge-category">${escapeHtml(POSITION_LABELS[p.position] || p.position)}</span>
+                <span class="badge">${escapeHtml(p.sourceType)}</span>
+              </div>
+              <div class="status-actions">
+                <button class="btn-status btn-rejected" onclick="deleteCandidatePosition('${escapeHtml(p.id)}')">Supprimer</button>
+              </div>
+            </div>
+            <div class="report-description" style="font-size: 12px;">
+              ${escapeHtml(p.law?.titleVulgarized || p.law?.titleOfficial || '')}<br/>
+              ${p.quote ? '« ' + escapeHtml(p.quote) + ' »<br/>' : ''}
+              <a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noopener noreferrer">Source</a>
+              · ${escapeHtml(p.sourceDate)} · vérifié par ${escapeHtml(p.verifiedBy)}
+            </div>
+          </div>`).join('');
+    } catch (e) {
+      container.innerHTML = `<div class="empty-state"><p>Erreur: ${escapeHtml(e.message)}</p></div>`;
+    }
+  }
+
+  let positionLawTimer = null;
+  function searchPositionLaw(q) {
+    clearTimeout(positionLawTimer);
+    positionLawTimer = setTimeout(async () => {
+      if (!q || q.trim().length < 2) return;
+      try {
+        const res = await fetch(`${API_BASE}/admin/laws?q=${encodeURIComponent(q.trim())}&limit=15`, { headers: { 'x-admin-key': adminKey } });
+        const data = await res.json();
+        document.getElementById('pos-law').innerHTML = '<option value="">Loi…</option>' + (data.laws || []).map(l =>
+          `<option value="${escapeHtml(l.id)}">${escapeHtml(l.titleVulgarized || l.titleOfficial)}</option>`).join('');
+      } catch (e) { showToast('Recherche de loi impossible', 'error'); }
+    }, 300);
+  }
+
+  async function submitCandidatePosition() {
+    const payload = {
+      candidateId: document.getElementById('pos-candidate').value,
+      lawId: document.getElementById('pos-law').value,
+      position: document.getElementById('pos-position').value,
+      sourceType: document.getElementById('pos-sourceType').value,
+      sourceUrl: document.getElementById('pos-sourceUrl').value.trim(),
+      quote: document.getElementById('pos-quote').value.trim(),
+      sourceDate: document.getElementById('pos-sourceDate').value,
+      verifiedBy: document.getElementById('pos-verifiedBy').value.trim(),
+    };
+    if (!payload.candidateId || !payload.lawId) { showToast('Choisissez un candidat et une loi', 'error'); return; }
+    try {
+      const res = await fetch(`${API_BASE}/admin/candidate-positions`, {
+        method: 'POST',
+        headers: { 'x-admin-key': adminKey, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        showToast('Position enregistrée', 'success');
+        document.getElementById('pos-quote').value = '';
+        document.getElementById('pos-sourceUrl').value = '';
+        loadCandidatePositions();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(Array.isArray(err.message) ? err.message.join(' · ') : (err.message || 'Erreur de sauvegarde'), 'error');
+      }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+  }
+
+  async function deleteCandidatePosition(id) {
+    if (!confirm('Supprimer cette position ?')) return;
+    const res = await fetch(`${API_BASE}/admin/candidate-positions/${id}`, { method: 'DELETE', headers: { 'x-admin-key': adminKey } });
+    if (res.ok) { showToast('Position supprimée', 'success'); loadCandidatePositions(); }
+    else showToast('Suppression impossible', 'error');
+  }
+
   async function loadCandidates() {
     const container = document.getElementById('candidates-results');
     container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted)"><div class="spinner" style="margin:0 auto 12px"></div>Chargement des candidats…</div>';
@@ -1323,6 +1493,8 @@
             <div class="report-meta">
               <span style="font-size: 16px; font-weight: bold;">${escapeHtml(c.name)}</span>
               <span class="badge badge-category">${escapeHtml(c.party)}</span>
+              <span class="badge">${escapeHtml(c.status || 'DECLARE')}</span>
+              <span class="badge">${c.officialProgramUrl ? '📄 Programme officiel' : '⏳ ' + escapeHtml(c.programStatus || 'NON_PUBLIE')}</span>
             </div>
             <div class="status-actions">
               <button class="btn-status btn-review" onclick='editCandidate(${JSON.stringify(c).replace(/'/g, "&#39;")})'>Modifier</button>
@@ -1348,6 +1520,7 @@
     document.getElementById('candidate-programUrl').value = '';
     document.getElementById('candidate-programFile').value = '';
     document.getElementById('candidate-description').value = '';
+    setCandidateOfficialFields({});
     
     document.getElementById('candidate-modal-title').textContent = 'Nouveau Candidat';
     document.getElementById('candidate-modal-overlay').style.display = 'flex';
@@ -1364,9 +1537,42 @@
     document.getElementById('candidate-programUrl').value = c.programUrl || '';
     document.getElementById('candidate-programFile').value = '';
     document.getElementById('candidate-description').value = c.description || '';
+    setCandidateOfficialFields(c);
     
     document.getElementById('candidate-modal-title').textContent = 'Modifier Candidat';
     document.getElementById('candidate-modal-overlay').style.display = 'flex';
+  }
+
+  function setCandidateOfficialFields(c) {
+    document.getElementById('candidate-status').value = c.status || 'DECLARE';
+    document.getElementById('candidate-programStatus').value = c.programStatus || 'NON_PUBLIE';
+    document.getElementById('candidate-officialSiteUrl').value = c.officialSiteUrl || '';
+    document.getElementById('candidate-officialProgramUrl').value = c.officialProgramUrl || '';
+    document.getElementById('candidate-officialProgramFile').value = '';
+    document.getElementById('candidate-programPublishedAt').value = c.programPublishedAt || '';
+    document.getElementById('candidate-groupOrganeRef').value = c.groupOrganeRef || '';
+    document.getElementById('candidate-deputySearch').value = '';
+    const deputySelect = document.getElementById('candidate-deputyId');
+    deputySelect.innerHTML = '<option value="">— Aucun —</option>' +
+      (c.deputyId ? `<option value="${escapeHtml(c.deputyId)}" selected>Député lié (${escapeHtml(c.deputyId.slice(0, 8))}…)</option>` : '');
+  }
+
+  let deputySearchTimer = null;
+  function searchCandidateDeputy(q) {
+    clearTimeout(deputySearchTimer);
+    deputySearchTimer = setTimeout(async () => {
+      if (!q || q.trim().length < 2) return;
+      try {
+        const res = await fetch(`${API_BASE}/deputies?q=${encodeURIComponent(q.trim())}&limit=10`);
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.deputies || data.data || []);
+        const select = document.getElementById('candidate-deputyId');
+        const current = select.value;
+        select.innerHTML = '<option value="">— Aucun —</option>' + list.map(d =>
+          `<option value="${escapeHtml(d.id)}" ${d.id === current ? 'selected' : ''}>${escapeHtml(d.fullName)} — ${escapeHtml(d.party || '')}</option>`
+        ).join('');
+      } catch (e) { showToast('Recherche de député impossible', 'error'); }
+    }, 300);
   }
 
   function closeCandidateModal() {
@@ -1419,8 +1625,19 @@
     const uploadedPartyLogo = await uploadFile('candidate-partyLogoFile');
     if (uploadedPartyLogo) partyLogoUrl = uploadedPartyLogo;
 
+    let officialProgramUrl = document.getElementById('candidate-officialProgramUrl').value.trim();
+    const uploadedOfficialProgram = await uploadFile('candidate-officialProgramFile');
+    if (uploadedOfficialProgram) officialProgramUrl = uploadedOfficialProgram;
+
     const payload = {
-      name, party, description, photoUrl, programUrl, partyLogoUrl
+      name, party, description, photoUrl, programUrl, partyLogoUrl,
+      status: document.getElementById('candidate-status').value,
+      programStatus: document.getElementById('candidate-programStatus').value,
+      officialSiteUrl: document.getElementById('candidate-officialSiteUrl').value.trim(),
+      officialProgramUrl,
+      programPublishedAt: document.getElementById('candidate-programPublishedAt').value,
+      deputyId: document.getElementById('candidate-deputyId').value,
+      groupOrganeRef: document.getElementById('candidate-groupOrganeRef').value.trim(),
     };
 
     const method = id ? 'PUT' : 'POST';
@@ -1438,7 +1655,9 @@
         closeCandidateModal();
         loadCandidates();
       } else {
-        showToast('Erreur de sauvegarde', 'error');
+        const err = await res.json().catch(() => ({}));
+        const msg = Array.isArray(err.message) ? err.message.join(' · ') : err.message;
+        showToast(msg || 'Erreur de sauvegarde', 'error');
       }
     } catch (e) {
       showToast('Erreur de connexion', 'error');

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Candidate } from './candidate.entity';
+import { Candidate, CandidateStatus } from './candidate.entity';
 import axios from 'axios';
 
 @Injectable()
@@ -10,11 +10,11 @@ export class CandidatesSyncService {
     private readonly GITHUB_API_URL = 'https://api.github.com/repos/maximerat/politchique/contents/content/candidats';
     private readonly SITE_BASE_URL = 'https://www.candidatspresidentielles2027.fr';
 
-    // Candidats explicitement exclus ou non déclarés (ex: Jordan Bardella demandé par l'utilisateur)
-    private readonly EXCLUDED_NAMES = [
-        'jordan bardella',
-        'bardella',
-    ];
+    /**
+     * Exclusions historiques (auparavant supprimées à chaque synchronisation).
+     * Elles sont désormais créées avec le statut MASQUE, modifiable depuis l'admin.
+     */
+    static readonly LEGACY_HIDDEN_NAMES = ['jordan bardella'];
 
     constructor(
         @InjectRepository(Candidate)
@@ -33,14 +33,6 @@ export class CandidatesSyncService {
         try {
             // 1. Récupérer les candidats actuels en base
             const existingCandidates = await this.candidateRepository.find();
-
-            // 2. Supprimer les candidats explicitement exclus s'ils sont encore en base
-            for (const cand of existingCandidates) {
-                if (this.isExcluded(cand.name)) {
-                    this.logger.warn(`🗑️ Suppression du candidat exclu en base : ${cand.name}`);
-                    await this.candidateRepository.delete(cand.id);
-                }
-            }
 
             // 3. Récupérer les fiches de candidats depuis l'API GitHub de politchique
             const response = await axios.get(this.GITHUB_API_URL, {
@@ -84,7 +76,7 @@ export class CandidatesSyncService {
                     const photoSource = getVal('photoSource');
                     const description = getVal('description') || '';
 
-                    if (!name || this.isExcluded(name)) {
+                    if (!name) {
                         continue;
                     }
 
@@ -133,6 +125,7 @@ export class CandidatesSyncService {
                             description: cleanDescription,
                             programUrl: `${this.SITE_BASE_URL}/candidats/${file.name.replace('.md', '')}`,
                             displayOrder: 0,
+                            status: this.isLegacyHidden(name) ? CandidateStatus.MASQUE : CandidateStatus.DECLARE,
                         });
                         await this.candidateRepository.save(newCandidate);
                         existingCandidates.push(newCandidate);
@@ -158,9 +151,9 @@ export class CandidatesSyncService {
         }
     }
 
-    private isExcluded(name: string): boolean {
+    isLegacyHidden(name: string): boolean {
         const norm = this.normalize(name);
-        return this.EXCLUDED_NAMES.some(excluded => norm.includes(excluded));
+        return CandidatesSyncService.LEGACY_HIDDEN_NAMES.includes(norm);
     }
 
     private normalize(str: string): string {

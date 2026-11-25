@@ -5,6 +5,7 @@ import { HealthController } from './health.controller';
 import { AdminReportsController, AdminLawsController } from './admin-reports.controller';
 import { AdminPollsController } from './admin-polls.controller';
 import { AdminCandidatesController } from './admin-candidates.controller';
+import { AdminCandidatePositionsController } from './admin-candidate-positions.controller';
 import { IngestionModule } from '../ingestion/ingestion.module';
 import { Law } from '../laws/law.entity';
 import { Amendement } from '../laws/amendement.entity';
@@ -33,6 +34,7 @@ import { Candidate } from '../surveys/candidate.entity';
         AdminLawsController,
         AdminPollsController,
         AdminCandidatesController,
+        AdminCandidatePositionsController,
     ],
 })
 export class AdminModule { }

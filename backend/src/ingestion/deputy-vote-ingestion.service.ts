@@ -12,6 +12,8 @@ import { AmendementIngestionService } from './amendement-ingestion.service';
 import { CompteRenduScrapingService } from './compte-rendu-scraping.service';
 import { DynScraperService } from './dyn-scraper.service';
 import { NotificationService } from '../notifications/notification.service';
+import { GroupVotesService } from '../votes/group-votes.service';
+import { extractGroupVotesFromScrutin, groupVotesFromScraped } from '../votes/group-votes';
 
 @Injectable()
 export class DeputyVoteIngestionService {
@@ -42,6 +44,7 @@ export class DeputyVoteIngestionService {
         private readonly crScrapingService: CompteRenduScrapingService,
         private readonly dynScraperService: DynScraperService,
         private readonly notificationService: NotificationService,
+        private readonly groupVotesService: GroupVotesService,
     ) { }
 
     /**
@@ -472,38 +475,32 @@ export class DeputyVoteIngestionService {
     }
 
     private async storeIndividualVotes(law: Law, scrutin: any, scrutinId: string, dateScrutin: string, isMotionDeRejet: boolean = false): Promise<void> {
-        const groupes = scrutin.groupes?.groupe;
-        if (!groupes) return;
-        const groupesList = Array.isArray(groupes) ? groupes : [groupes];
+        // Les choix sont déjà exprimés sur la loi (inversés pour une motion de rejet)
+        const groups = extractGroupVotesFromScrutin(scrutin, isMotionDeRejet);
 
-        for (const groupe of groupesList) {
-            const groupeLibelle = groupe.organeRef || groupe.libelle || 'Inconnu';
-            
-            const forChoice = isMotionDeRejet ? VoteChoice.AGAINST : VoteChoice.FOR;
-            const againstChoice = isMotionDeRejet ? VoteChoice.FOR : VoteChoice.AGAINST;
+        for (const group of groups) {
+            await this.storeVotesByRefs(law, group.nominatif.FOR, VoteChoice.FOR, group.organeRef, scrutinId, dateScrutin);
+            await this.storeVotesByRefs(law, group.nominatif.AGAINST, VoteChoice.AGAINST, group.organeRef, scrutinId, dateScrutin);
+            await this.storeVotesByRefs(law, group.nominatif.ABSTAIN, VoteChoice.ABSTAIN, group.organeRef, scrutinId, dateScrutin);
+        }
 
-            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.pour?.votant, forChoice, groupeLibelle, scrutinId, dateScrutin);
-            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.contre?.votant, againstChoice, groupeLibelle, scrutinId, dateScrutin);
-            await this.processVoteGroup(law, groupe.vote?.decompteVoix?.abstentions?.votant, VoteChoice.ABSTAIN, groupeLibelle, scrutinId, dateScrutin);
+        try {
+            await this.groupVotesService.replaceForLaw(law, scrutinId, groups);
+        } catch (err) {
+            this.logger.warn(`⚠️ Votes par groupe non enregistrés pour ${law.externalId}: ${err.message}`);
         }
     }
 
-    private async processVoteGroup(law: Law, votants: any, choice: VoteChoice, groupeLibelle: string, scrutinId: string, dateScrutin: string): Promise<void> {
-        if (!votants) return;
-        const votantsList = Array.isArray(votants) ? votants : [votants];
-
-        for (const votant of votantsList) {
-            const acteurRef = votant.acteurRef || votant.uid;
-            if (!acteurRef) continue;
-
+    private async storeVotesByRefs(law: Law, acteurRefs: string[], choice: VoteChoice, organeRef: string, scrutinId: string, dateScrutin: string): Promise<void> {
+        for (const acteurRef of acteurRefs) {
             try {
                 let deputy = await this.deputyRepository.findOne({ where: { anActeurRef: acteurRef } });
                 if (!deputy) {
                     deputy = this.deputyRepository.create({
                         externalId: acteurRef,
                         anActeurRef: acteurRef,
-                        fullName: votant.nom || acteurRef,
-                        groupePolitique: groupeLibelle,
+                        fullName: acteurRef,
+                        groupePolitique: organeRef,
                     });
                     await this.deputyRepository.save(deputy);
                 }
@@ -518,8 +515,45 @@ export class DeputyVoteIngestionService {
                     });
                     await this.officialVoteRepository.save(officialVote);
                 }
-            } catch { }
+            } catch (err) {
+                this.logger.warn(`⚠️ Vote individuel non enregistré (${acteurRef}): ${err.message}`);
+            }
         }
+    }
+
+    /**
+     * Calcule les votes par groupe des lois déjà résolues qui n'en ont pas encore
+     * (scrutins encore présents dans la source récente).
+     */
+    async backfillGroupVotes(): Promise<{ updated: number; notFound: number }> {
+        const laws = await this.lawRepository
+            .createQueryBuilder('law')
+            .where(`law."deputyVoteResult" ->> 'scrutinId' IS NOT NULL`)
+            .getMany();
+        const scrutins = await this.fetchScrutins();
+        const byUid = new Map(scrutins.map((sc: any) => [sc.uid, sc]));
+
+        let updated = 0;
+        let notFound = 0;
+        for (const law of laws) {
+            const scrutinId = law.deputyVoteResult?.scrutinId;
+            if (!scrutinId || (await this.groupVotesService.hasGroupVotes(law.id))) continue;
+            const scrutin = byUid.get(scrutinId);
+            if (!scrutin) {
+                notFound++;
+                continue;
+            }
+            await this.storeIndividualVotes(
+                law,
+                scrutin,
+                scrutinId,
+                law.deputyVoteResult.dateScrutin || scrutin.dateScrutin,
+                !!law.deputyVoteResult.isMotionDeRejet,
+            );
+            updated++;
+        }
+        this.logger.log(`🏛️ Backfill votes par groupe : ${updated} loi(s), ${notFound} scrutin(s) introuvable(s)`);
+        return { updated, notFound };
     }
 
     private async applyScrapedResult(law: Law, result: any): Promise<void> {
@@ -656,6 +690,21 @@ export class DeputyVoteIngestionService {
             }
         }
         
+        try {
+            const flipped = details.groupVotes.map((g: any) => ({
+                ...g,
+                votes: g.votes.map((v: any) => ({
+                    ...v,
+                    choice: !isMotionDeRejet ? v.choice
+                        : v.choice === VoteChoice.FOR ? VoteChoice.AGAINST
+                        : v.choice === VoteChoice.AGAINST ? VoteChoice.FOR : v.choice,
+                })),
+            }));
+            await this.groupVotesService.replaceForLaw(law, scrutinId, groupVotesFromScraped(flipped));
+        } catch (err) {
+            this.logger.warn(`⚠️ Votes par groupe non enregistrés pour ${law.externalId}: ${err.message}`);
+        }
+
         this.logger.log(`✅ Résultats scrapés DYN appliqués pour ${law.externalId} (Scrutin: ${scrutinId})`);
         if (law.status === LawStatus.VOTED_AN || law.status === LawStatus.REJECTED) {
             await this.notificationService.queueMorningDigest(law.id);
