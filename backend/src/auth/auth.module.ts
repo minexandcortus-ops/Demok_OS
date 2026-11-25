@@ -11,6 +11,10 @@ import { Deputy } from '../votes/deputy.entity';
 import { GamificationModule } from '../gamification/gamification.module';
 import { NotificationModule } from '../notifications/notification.module';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { RefreshToken } from './refresh-token.entity';
+import { RefreshTokenService } from './refresh-token.service';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AUTH_THROTTLER_OPTIONS } from './auth.throttle';
 
 /**
  * Module d'authentification et de gestion des profils citoyens.
@@ -18,21 +22,23 @@ import { JwtStrategy } from './strategies/jwt.strategy';
  */
 @Module({
     imports: [
-        TypeOrmModule.forFeature([User, Citizen, Deputy]),
+        TypeOrmModule.forFeature([User, Citizen, Deputy, RefreshToken]),
         PassportModule.register({ defaultStrategy: 'jwt' }),
         JwtModule.registerAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: async (configService: ConfigService) => ({
                 secret: configService.get<string>('JWT_SECRET'),
-                signOptions: { expiresIn: '30d' }, // Session longue pour l'application mobile
+                // Jeton d'accès court : la session est prolongée via /auth/refresh
+                signOptions: { expiresIn: (configService.get<string>('JWT_ACCESS_TTL') || '15m') as any },
             }),
         }),
+        ThrottlerModule.forRoot(AUTH_THROTTLER_OPTIONS),
         GamificationModule,
         NotificationModule,
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy],
+    providers: [AuthService, JwtStrategy, RefreshTokenService],
     exports: [AuthService, PassportModule, JwtModule],
 })
 export class AuthModule { }

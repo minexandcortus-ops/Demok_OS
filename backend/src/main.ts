@@ -6,6 +6,9 @@ import { join } from 'path';
 async function bootstrap() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     
+    // Derrière Caddy : req.ip doit refléter X-Forwarded-For (rate limiting par client)
+    app.set('trust proxy', 1);
+
     // Prefix all API routes so they don't conflict with frontend
     app.setGlobalPrefix('api');
 

@@ -91,6 +91,7 @@ class _OtpScreenState extends State<OtpScreen> {
           email: data['email'],
           birthYear: data['birthYear'],
           token: data['accessToken'],
+          refreshToken: data['refreshToken'],
         );
 
         Navigator.pushAndRemoveUntil(

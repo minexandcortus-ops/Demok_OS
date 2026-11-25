@@ -255,11 +255,7 @@ class _HomeScreenContentState extends State<_HomeScreenContent> {
         path += '?${queryParameters.join('&')}';
       }
 
-      final response = await ApiClient.get(path, headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-        });
+      final response = await ApiClient.get(path);
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);

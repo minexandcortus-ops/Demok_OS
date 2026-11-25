@@ -1,12 +1,14 @@
 import { Controller, Get, Param, Query, Res, NotFoundException } from '@nestjs/common';
 import { Response } from 'express';
 import { DeputiesService } from './deputies.service';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('deputies')
 export class DeputiesController {
     constructor(private readonly deputiesService: DeputiesService) {}
 
     @Get()
+    @PublicCache(600)
     async searchDeputies(
         @Query('q') query: string,
         @Query('sortBy') sortBy: string,
@@ -21,6 +23,7 @@ export class DeputiesController {
     }
 
     @Get('department/:deptCode')
+    @PublicCache(600)
     async getDeputiesByDepartment(@Param('deptCode') deptCode: string) {
         return this.deputiesService.getDeputiesByDepartment(deptCode);
     }
@@ -48,11 +51,13 @@ export class DeputiesController {
     }
 
     @Get(':id')
+    @PublicCache(600)
     async getDeputyById(@Param('id') id: string) {
         return this.deputiesService.getDeputyById(id);
     }
 
     @Get(':id/votes')
+    @PublicCache(600)
     async getDeputyVotes(
         @Param('id') id: string,
         @Query('limit') limit: string,
@@ -63,6 +68,7 @@ export class DeputiesController {
     }
 
     @Get(':id/stats')
+    @PublicCache(600)
     async getDeputyStats(@Param('id') id: string) {
         const stats = await this.deputiesService.getDeputyStats(id);
         if (!stats) throw new NotFoundException('Stats not found for this deputy');

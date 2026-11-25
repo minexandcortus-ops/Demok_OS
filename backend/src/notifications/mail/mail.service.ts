@@ -59,7 +59,7 @@ export class MailService {
                 <span style="font-size: 36px; font-weight: bold; color: #007AFF; letter-spacing: 8px;">${code}</span>
               </div>
             </div>
-            <p style="color: #666; font-size: 14px; text-align: center;">Ce code est valable pendant <strong>30 minutes</strong>.</p>
+            <p style="color: #666; font-size: 14px; text-align: center;">Ce code est valable pendant <strong>10 minutes</strong>.</p>
             <p style="color: #666; font-size: 14px;">Si tu n'as pas créé de compte Démok, tu peux ignorer cet email.</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
             <p style="color: #999; font-size: 12px; text-align: center;">L'équipe Démok — Démocratisons la Démocratie</p>

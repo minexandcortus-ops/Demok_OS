@@ -18,6 +18,9 @@ class UserSession {
   String? email;
   int? birthYear;
   String? accessToken;
+
+  /// Jeton de rafraîchissement (rotation à chaque usage, cf. ApiClient)
+  String? refreshToken;
   
   SharedPreferences? _prefs;
 
@@ -42,6 +45,7 @@ class UserSession {
     email = _prefs?.getString('session_email');
     birthYear = _prefs?.getInt('session_birthYear');
     accessToken = _prefs?.getString('session_token');
+    refreshToken = _prefs?.getString('session_refresh_token');
 
     isAppActiveNotifier.value = true;
 
@@ -128,6 +132,7 @@ class UserSession {
     String? email,
     int? birthYear,
     String? token,
+    String? refreshToken,
   }) async {
     this.userId = userId;
     this.citizenId = citizenId;
@@ -135,6 +140,7 @@ class UserSession {
     if (email != null) this.email = email;
     if (birthYear != null) this.birthYear = birthYear;
     if (token != null) this.accessToken = token;
+    if (refreshToken != null) this.refreshToken = refreshToken;
     
     if (kDebugMode) {
       debugPrint('[UserSession] Saving session: userId=$userId, pseudo=$pseudo, email=$email, birthYear=$birthYear');
@@ -147,6 +153,7 @@ class UserSession {
       if (email != null) await _prefs!.setString('session_email', email);
       if (birthYear != null) await _prefs!.setInt('session_birthYear', birthYear);
       if (token != null) await _prefs!.setString('session_token', token);
+      if (refreshToken != null) await _prefs!.setString('session_refresh_token', refreshToken);
       await _prefs!.remove('session_isGuest');
     }
     isAppActiveNotifier.value = true;
@@ -158,6 +165,7 @@ class UserSession {
     pseudo = null;
     email = null;
     accessToken = null;
+    refreshToken = null;
     
     if (_prefs != null) {
       await _prefs!.remove('session_userId');
@@ -166,8 +174,17 @@ class UserSession {
       await _prefs!.remove('session_email');
       await _prefs!.remove('session_birthYear');
       await _prefs!.remove('session_token');
+      await _prefs!.remove('session_refresh_token');
       await _prefs!.remove('session_isGuest');
     }
     isAppActiveNotifier.value = true;
+  }
+
+  /// Met à jour la paire de jetons après un rafraîchissement.
+  Future<void> updateTokens({required String accessToken, required String refreshToken}) async {
+    this.accessToken = accessToken;
+    this.refreshToken = refreshToken;
+    await _prefs?.setString('session_token', accessToken);
+    await _prefs?.setString('session_refresh_token', refreshToken);
   }
 }

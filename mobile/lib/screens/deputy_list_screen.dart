@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import '../models/deputy.dart';
 import '../services/deputies_service.dart';
@@ -187,7 +186,6 @@ class _DeputyListScreenState extends State<DeputyListScreen> {
                                         deputy.photoUrl!.startsWith('http')
                                             ? deputy.photoUrl!
                                             : '${Env.apiUrl.replaceAll('/api', '')}${deputy.photoUrl!}',
-                                        headers: kDebugMode ? const {'Bypass-Tunnel-Reminder': 'true'} : null,
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stackTrace) {
                                           return const Icon(Icons.person, color: Colors.grey);

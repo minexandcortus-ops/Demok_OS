@@ -11,6 +11,8 @@ import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { GamificationService } from '../gamification/gamification.service';
 import { MailService } from '../notifications/mail/mail.service';
+import { RefreshTokenService } from './refresh-token.service';
+import { generateOtp, hashOtp, verifyOtpHash, OTP_MAX_ATTEMPTS, OTP_TTL_MS } from './otp.util';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,7 @@ export class AuthService {
         private readonly gamificationService: GamificationService,
         private readonly mailService: MailService,
         private readonly jwtService: JwtService,
+        private readonly refreshTokenService: RefreshTokenService,
     ) { }
 
     /**
@@ -93,13 +96,15 @@ export class AuthService {
         user.passwordHash = await this.hashPassword(dto.password);
         user.onboardingCompleted = true;
 
-        // Generate OTP for email verification
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otpCode = otpCode;
-        user.otpExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
         user.emailVerified = false;
 
-        const savedUser = await this.userRepository.save(user);
+        // L'id est nécessaire pour lier le hash de l'OTP à l'utilisateur
+        let savedUser = await this.userRepository.save(user);
+
+        // Generate OTP for email verification
+        const otpCode = generateOtp();
+        this.assignOtp(savedUser, otpCode);
+        savedUser = await this.userRepository.save(savedUser);
 
         // Create Citizen profile
         const citizen = new Citizen();
@@ -126,6 +131,15 @@ export class AuthService {
     }
 
     /**
+     * Stocke le hash d'un nouvel OTP, réinitialise le compteur d'essais et l'expiration.
+     */
+    private assignOtp(user: User, otpCode: string): void {
+        user.otpCode = hashOtp(user.id, otpCode);
+        user.otpExpires = new Date(Date.now() + OTP_TTL_MS);
+        user.otpAttempts = 0;
+    }
+
+    /**
      * Verifies the OTP code sent by email after registration
      */
     async verifyOtp(userId: string, code: string) {
@@ -143,17 +157,34 @@ export class AuthService {
             throw new BadRequestException('Le code a expiré. Demande un nouveau code.');
         }
 
-        if (user.otpCode !== code.trim()) {
-            throw new BadRequestException('Code incorrect.');
+        if ((user.otpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+            throw new BadRequestException('Trop de tentatives. Demande un nouveau code.');
+        }
+
+        if (!verifyOtpHash(user.id, code, user.otpCode)) {
+            user.otpAttempts = (user.otpAttempts ?? 0) + 1;
+            if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+                // Invalide le code : un nouveau devra être demandé
+                user.otpCode = null;
+                user.otpExpires = null;
+            }
+            await this.userRepository.save(user);
+            const remaining = Math.max(OTP_MAX_ATTEMPTS - user.otpAttempts, 0);
+            throw new BadRequestException(
+                remaining > 0
+                    ? `Code incorrect. ${remaining} tentative(s) restante(s).`
+                    : 'Trop de tentatives. Demande un nouveau code.',
+            );
         }
 
         // Mark as verified, clear OTP
         user.emailVerified = true;
         user.otpCode = null;
         user.otpExpires = null;
+        user.otpAttempts = 0;
         await this.userRepository.save(user);
 
-        const accessToken = this.generateToken(user);
+        const { accessToken, refreshToken } = await this.issueTokens(user);
         
         // Fetch citizen for complete response
         const citizen = await this.citizenRepository.findOne({
@@ -169,6 +200,7 @@ export class AuthService {
             email: this.decryptEmail(user.emailEncrypted),
             birthYear: citizen?.birthYear,
             accessToken,
+            refreshToken,
         };
     }
 
@@ -180,9 +212,8 @@ export class AuthService {
         if (!user) throw new UnauthorizedException('Utilisateur introuvable');
         if (user.emailVerified) return { success: true, message: 'Email déjà vérifié.' };
 
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otpCode = otpCode;
-        user.otpExpires = new Date(Date.now() + 30 * 60 * 1000);
+        const otpCode = generateOtp();
+        this.assignOtp(user, otpCode);
         await this.userRepository.save(user);
 
         // Decrypt email to resend
@@ -254,7 +285,7 @@ export class AuthService {
         await this.gamificationService.handleDailyConnection(citizen.id);
         await this.gamificationService.checkAnniversary(citizen.id);
 
-        const accessToken = this.generateToken(citizen.user);
+        const { accessToken, refreshToken } = await this.issueTokens(citizen.user);
 
         return {
             success: true,
@@ -264,6 +295,7 @@ export class AuthService {
             email: this.decryptEmail(citizen.user.emailEncrypted),
             birthYear: citizen.birthYear,
             accessToken,
+            refreshToken,
             message: 'Login successful',
         };
     }
@@ -274,6 +306,24 @@ export class AuthService {
     private generateToken(user: User): string {
         const payload = { sub: user.id };
         return this.jwtService.sign(payload);
+    }
+
+    /** Jeton d'accès court + jeton de rafraîchissement révocable. */
+    private async issueTokens(user: User): Promise<{ accessToken: string; refreshToken: string }> {
+        const { token } = await this.refreshTokenService.issue(user);
+        return { accessToken: this.generateToken(user), refreshToken: token };
+    }
+
+    /** Renouvelle la session (rotation du jeton de rafraîchissement). */
+    async refresh(refreshToken: string) {
+        const { user, token } = await this.refreshTokenService.rotate(refreshToken);
+        return { accessToken: this.generateToken(user), refreshToken: token };
+    }
+
+    /** Déconnexion : le jeton de rafraîchissement n'est plus utilisable. */
+    async logout(refreshToken: string) {
+        await this.refreshTokenService.revoke(refreshToken);
+        return { success: true };
     }
 
     /**
@@ -326,6 +376,9 @@ export class AuthService {
         user.resetToken = null;
         user.resetTokenExpires = null;
         await this.userRepository.save(user);
+
+        // Un nouveau mot de passe ferme toutes les sessions ouvertes
+        await this.refreshTokenService.revokeAllForUser(user.id);
 
         return {
             success: true,

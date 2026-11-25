@@ -135,6 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: data['email'],
           birthYear: data['birthYear'],
           token: data['accessToken'],
+          refreshToken: data['refreshToken'],
         );
 
         // Navigate to home with user data (reset navigation stack)

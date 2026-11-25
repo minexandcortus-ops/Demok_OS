@@ -598,7 +598,7 @@ class _ProfileScreenContentState extends State<_ProfileScreenContent> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () async {
-                  await UserSession().clearSession();
+                  await ApiClient.logout();
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(builder: (context) => const HomeScreen()),

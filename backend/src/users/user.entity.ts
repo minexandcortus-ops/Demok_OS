@@ -26,8 +26,13 @@ export class User {
     @Column({ type: 'timestamp', nullable: true })
     resetTokenExpires: Date;
 
+    /** HMAC-SHA256 du code OTP (jamais le code en clair) */
     @Column({ nullable: true })
     otpCode: string;
+
+    /** Nombre de saisies erronées pour l'OTP courant */
+    @Column({ type: 'int', default: 0 })
+    otpAttempts: number;
 
     @Column({ type: 'timestamp', nullable: true })
     otpExpires: Date;

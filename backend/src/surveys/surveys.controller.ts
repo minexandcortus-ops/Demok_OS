@@ -3,6 +3,7 @@ import { SurveysService } from './surveys.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/user.entity';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('surveys')
 export class SurveysController {
@@ -12,6 +13,7 @@ export class SurveysController {
      * Get all presidential candidates
      */
     @Get('presidential/candidates')
+    @PublicCache(60)
     async getCandidates() {
         return this.surveysService.getCandidates();
     }
@@ -40,6 +42,7 @@ export class SurveysController {
      * Get voting results
      */
     @Get('presidential/results')
+    @PublicCache(60)
     async getResults() {
         return this.surveysService.getResults();
     }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/deputy.dart';
 import '../services/deputies_service.dart';
 import '../theme/app_colors.dart';
@@ -120,7 +119,6 @@ class _DeputyDetailScreenState extends State<DeputyDetailScreen> {
                         dep.photoUrl!.startsWith('http') 
                           ? dep.photoUrl! 
                           : '${Env.apiUrl.replaceAll('/api', '')}${dep.photoUrl!}',
-                        headers: kDebugMode ? const {'Bypass-Tunnel-Reminder': 'true'} : null,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(Icons.person, size: 60, color: Colors.grey);

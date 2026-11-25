@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Amendement, AmendementStatut } from './amendement.entity';
+import { PublicCache } from '../common/http-cache';
 
 @Controller()
 export class AmendementsController {
@@ -15,6 +16,7 @@ export class AmendementsController {
      * Liste les amendements d'une loi avec filtre optionnel par statut
      */
     @Get('laws/:lawId/amendements')
+    @PublicCache(300)
     async getAmendements(
         @Param('lawId') lawId: string,
         @Query('statut') statut?: string,
@@ -53,6 +55,7 @@ export class AmendementsController {
      * Stats des amendements d'une loi (nb par statut)
      */
     @Get('laws/:lawId/amendements/stats')
+    @PublicCache(300)
     async getAmendementsStats(@Param('lawId') lawId: string) {
         const stats = await this.amendementRepository
             .createQueryBuilder('amendement')
@@ -79,6 +82,7 @@ export class AmendementsController {
      * Détail d'un amendement
      */
     @Get('amendements/:id')
+    @PublicCache(300)
     async getAmendement(@Param('id') id: string) {
         const amendement = await this.amendementRepository.findOne({
             where: { id },

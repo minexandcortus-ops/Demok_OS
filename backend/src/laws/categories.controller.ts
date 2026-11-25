@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './category.entity';
 import { CategorizationService } from './categorization.service';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('categories')
 export class CategoriesController {
@@ -17,6 +18,7 @@ export class CategoriesController {
     ) { }
 
     @Get()
+    @PublicCache(3600)
     async getAllCategories() {
         return this.categoryRepository.find();
     }

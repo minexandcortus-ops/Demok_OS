@@ -7,6 +7,7 @@ import { CitizenLevel } from './entities/citizen-level.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/user.entity';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('gamification')
 export class GamificationController {
@@ -41,6 +42,7 @@ export class GamificationController {
      * Liste tous les niveaux disponibles
      */
     @Get('levels')
+    @PublicCache(3600)
     async getAllLevels() {
         const levels = await this.levelRepository.find({
             order: { level: 'ASC' },

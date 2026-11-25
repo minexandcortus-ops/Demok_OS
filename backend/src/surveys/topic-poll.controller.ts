@@ -3,17 +3,20 @@ import { TopicPollService } from './topic-poll.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/user.entity';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('surveys/polls')
 export class TopicPollController {
     constructor(private readonly service: TopicPollService) { }
 
     @Get()
+    @PublicCache(60)
     async getPolls() {
         return this.service.getPolls();
     }
 
     @Get(':slug')
+    @PublicCache(60)
     async getPoll(@Param('slug') slug: string) {
         return this.service.getPoll(slug);
     }
