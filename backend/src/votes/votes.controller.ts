@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
 import { User } from '../users/user.entity';
+import { PublicCache } from '../common/http-cache';
 
 @Controller('votes')
 export class VotesController {
@@ -48,6 +49,7 @@ export class VotesController {
      * Identification is optional via JWT.
      */
     @Get('laws')
+    @PublicCache(60)
     @UseGuards(OptionalJwtAuthGuard)
     async getLaws(
         @CurrentUser() user?: User,
@@ -68,6 +70,7 @@ export class VotesController {
      * Retrieves a single law by its ID.
      */
     @Get('laws/:lawId')
+    @PublicCache(60)
     @UseGuards(OptionalJwtAuthGuard)
     async getLaw(
         @Param('lawId') lawId: string,
@@ -81,6 +84,7 @@ export class VotesController {
      * Cached in DB after first generation.
      */
     @Get('laws/:lawId/deep-dive')
+    @PublicCache(60)
     @UseGuards(OptionalJwtAuthGuard)
     async getLawDeepDive(
         @Param('lawId') lawId: string,

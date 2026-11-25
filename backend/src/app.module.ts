@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { HttpCacheInterceptor } from './common/http-cache';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
@@ -84,6 +86,6 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
         ReportsModule,
     ],
     controllers: [],
-    providers: [],
+    providers: [{ provide: APP_INTERCEPTOR, useClass: HttpCacheInterceptor }],
 })
 export class AppModule { }

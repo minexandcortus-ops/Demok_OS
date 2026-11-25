@@ -10,13 +10,15 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 /// Client HTTP centralisé qui injecte les headers nécessaires dans toutes les requêtes.
 /// Gère automatiquement les erreurs 401 (token expiré) en déconnectant l'utilisateur.
 class ApiClient {
-  static const Map<String, String> _defaultHeaders = {
-    'Content-Type': 'application/json',
-    'Bypass-Tunnel-Reminder': 'true', // Contourne l'avertissement de sécurité de localtunnel
-  };
+  /// Client HTTP sous-jacent (remplaçable dans les tests).
+  static http.Client client = http.Client();
 
-  static Map<String, String> _buildHeaders([Map<String, String>? extra]) {
-    final headers = Map<String, String>.from(_defaultHeaders);
+  /// En-têtes communs. Les GET n'envoient pas de Content-Type : sans en-tête « non simple »,
+  /// une requête anonyme évite le preflight CORS (OPTIONS) et peut profiter du cache HTTP.
+  static Map<String, String> _buildHeaders([Map<String, String>? extra, bool withBody = true]) {
+    final headers = <String, String>{
+      if (withBody) 'Content-Type': 'application/json',
+    };
     
     // Inject JWT token if available
     final token = UserSession().accessToken;
@@ -44,23 +46,18 @@ class ApiClient {
            !path.contains('/auth/forgot-password');
   }
 
+  /// GET : la fraîcheur est gérée par les en-têtes Cache-Control de l'API
+  /// (cache public court pour les lectures anonymes, revalidation sinon).
   static Future<http.Response> get(String path, {Map<String, String>? headers}) async {
-    // Add cache buster for Web to prevent browser/PWA caching
-    final cacheBuster = 't=${DateTime.now().millisecondsSinceEpoch}';
-    final pathWithBuster = path.contains('?') ? '$path&$cacheBuster' : '$path?$cacheBuster';
-    final uri = Uri.parse('${Env.apiUrl}$pathWithBuster');
-    
-    final finalHeaders = _buildHeaders(headers);
-    finalHeaders['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-    
-    final response = await http.get(uri, headers: finalHeaders);
+    final uri = Uri.parse('${Env.apiUrl}$path');
+    final response = await client.get(uri, headers: _buildHeaders(headers, false));
     if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
 
   static Future<http.Response> post(String path, {Object? body, Map<String, String>? headers}) async {
     final uri = Uri.parse('${Env.apiUrl}$path');
-    final response = await http.post(
+    final response = await client.post(
       uri,
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
@@ -71,7 +68,7 @@ class ApiClient {
 
   static Future<http.Response> patch(String path, {Object? body, Map<String, String>? headers}) async {
     final uri = Uri.parse('${Env.apiUrl}$path');
-    final response = await http.patch(
+    final response = await client.patch(
       uri,
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
@@ -82,7 +79,7 @@ class ApiClient {
 
   static Future<http.Response> put(String path, {Object? body, Map<String, String>? headers}) async {
     final uri = Uri.parse('${Env.apiUrl}$path');
-    final response = await http.put(
+    final response = await client.put(
       uri,
       headers: _buildHeaders(headers),
       body: body != null ? jsonEncode(body) : null,
@@ -93,7 +90,7 @@ class ApiClient {
 
   static Future<http.Response> delete(String path, {Map<String, String>? headers}) async {
     final uri = Uri.parse('${Env.apiUrl}$path');
-    final response = await http.delete(uri, headers: _buildHeaders(headers));
+    final response = await client.delete(uri, headers: _buildHeaders(headers, false));
     if (response.statusCode == 401 && _shouldHandle401(path)) await _handle401();
     return response;
   }
