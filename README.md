@@ -64,3 +64,19 @@ flutter run -d chrome
 ## 📜 Licence
 
 Ce projet est distribué sous licence **MIT**. Voir le fichier `LICENSE` pour plus de détails.
+
+---
+
+## 🗄️ Migrations de base de données
+
+Le schéma de production est géré par des migrations TypeORM (`backend/src/database/migrations`), exécutées automatiquement au démarrage quand `DB_SYNCHRONIZE=false` (valeur de `docker-compose.prod.yml`). En développement, `synchronize` reste actif par défaut.
+
+```bash
+cd backend
+# Après modification d'une entité : générer la migration correspondante
+npm run migration:generate -- src/database/migrations/NomDeLaMigration
+npm run migration:run      # appliquer
+npm run migration:revert   # annuler la dernière
+```
+
+La CI applique toutes les migrations sur une base vide puis échoue si les entités et les migrations divergent.

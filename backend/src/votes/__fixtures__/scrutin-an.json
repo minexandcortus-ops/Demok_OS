@@ -1,0 +1,55 @@
+{
+  "uid": "VTANR5L17V1234",
+  "numero": "1234",
+  "dateScrutin": "2026-11-18",
+  "titre": "l'ensemble du projet de loi relatif à la simplification de la vie économique",
+  "syntheseVote": { "decompte": { "pour": "5", "contre": "3", "abstentions": "1", "nonVotants": "0" } },
+  "ventilationVotes": {
+    "organe": {
+      "organeRef": "PO838901",
+      "groupes": {
+        "groupe": [
+          {
+            "organeRef": "PO845401",
+            "nombreMembresGroupe": "4",
+            "vote": {
+              "positionMajoritaire": "pour",
+              "decompteVoix": { "nonVotants": "0", "pour": "3", "contre": "1", "abstentions": "0" },
+              "decompteNominatif": {
+                "nonVotants": null,
+                "pours": { "votant": [ { "acteurRef": "PA1001", "mandatRef": "PM1" }, { "acteurRef": "PA1002", "mandatRef": "PM2" }, { "acteurRef": "PA1003", "mandatRef": "PM3" } ] },
+                "contres": { "votant": { "acteurRef": "PA1004", "mandatRef": "PM4" } },
+                "abstentions": null
+              }
+            }
+          },
+          {
+            "organeRef": "PO845413",
+            "nombreMembresGroupe": "3",
+            "vote": {
+              "positionMajoritaire": "contre",
+              "decompteVoix": { "nonVotants": "1", "pour": "0", "contre": "2", "abstentions": "0" },
+              "decompteNominatif": {
+                "nonVotants": { "votant": { "acteurRef": "PA2003" } },
+                "pours": null,
+                "contres": { "votant": [ { "acteurRef": "PA2001" }, { "acteurRef": "PA2002" } ] },
+                "abstentions": null
+              }
+            }
+          },
+          {
+            "organeRef": "PO845470",
+            "vote": {
+              "positionMajoritaire": "abstention",
+              "decompteVoix": { "nonVotants": "0", "pour": "2", "contre": "0", "abstentions": "1" },
+              "decompteNominatif": {
+                "pours": { "votant": [ { "acteurRef": "PA3001" }, { "acteurRef": "PA3002" } ] },
+                "abstentions": { "votant": { "acteurRef": "PA3003" } }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

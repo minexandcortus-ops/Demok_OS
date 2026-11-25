@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'user_session.dart';
 import 'api_client.dart';
+import '../models/group_vote.dart';
 
 class LawService {
   /// Toggles the favorite status of a law for the current user.
@@ -20,5 +21,15 @@ class LawService {
     } else {
       throw Exception('Failed to toggle favorite: ${response.body}');
     }
+  }
+
+  /// Vote de chaque groupe politique sur une loi (liste vide si non disponible).
+  static Future<List<GroupVote>> fetchGroupVotes(String lawId) async {
+    final response = await ApiClient.get('/votes/laws/$lawId/groups');
+    if (response.statusCode != 200) return [];
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return (data['groups'] as List<dynamic>? ?? [])
+        .map((g) => GroupVote.fromJson(g as Map<String, dynamic>))
+        .toList();
   }
 }
