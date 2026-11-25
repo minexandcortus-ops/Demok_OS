@@ -57,20 +57,6 @@ export class AdminPollsController {
         poll.isActive = false;
         await this.pollRepository.save(poll);
 
-        // Récupérer les voters : legacy (ids en string) + nouveau système SurveyRegistry
-        const legacyVoterIds = poll.voters ? poll.voters.split(',').filter(v => v.length > 0) : [];
-
-        const registryRepo = this.pollRepository.manager.getRepository('SurveyRegistry');
-        const registries = await registryRepo.find({
-            where: { surveyId: poll.id },
-            relations: ['citizen', 'citizen.user'],
-        });
-        const newVoterIds = registries
-            .map((r: any) => r.citizen?.user?.id)
-            .filter((id: any) => id !== undefined && id !== null);
-
-        const voterIds = [...new Set([...legacyVoterIds, ...newVoterIds])];
-
         return {
             success: true,
             message: `Sondage "${poll.question}" clôturé.`,
@@ -133,7 +119,6 @@ export class AdminPollsController {
             votePour: 0,
             voteNeutre: 0,
             voteContre: 0,
-            voters: '',
             isActive: true,
         });
 

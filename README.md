@@ -1,6 +1,6 @@
 # Démok - La Démocratie Collaborative 🗳️
 
-**Démok** ([demok.fr](https://demok.fr)) est une application web citoyenne permettant de suivre, de comprendre et de voter (de manière anonyme et consultative) sur les lois en cours de discussion au Parlement français.
+**Démok** ([demok.fr](https://demok.fr)) est une application web citoyenne permettant de suivre, de comprendre et de voter (de manière confidentielle et consultative) sur les lois en cours de discussion au Parlement français.
 
 L'objectif est de rendre le processus législatif accessible à tous grâce à l'IA, de décoder les textes de lois sans jargon politique, et de permettre aux citoyens de comparer leur vote avec celui des députés.
 
@@ -13,7 +13,7 @@ L'objectif est de rendre le processus législatif accessible à tous grâce à l
   - 🏛️ **Mode Classique** : Ton neutre, institutionnel et synthétique.
   - 🔥 **Mode Rue** : Langage direct, familier et décodé sans langue de bois.
 - **Module « Approfondir le sujet »** : Analyse détaillée générée par IA et mise en cache pour chaque loi (contexte, chronologie, chiffres clés sourcés et impacts concrets au quotidien).
-- **Vote Citoyen Anonyme** : Architecture à « Double Registre » (`VoteRegistry` + `VoteChoice`) garantissant l'anonymat mathématique du bulletin tout en empêchant le double vote.
+- **Vote Citoyen Confidentiel (pseudonymisé)** : architecture à « Double Registre » — le registre (`VoteRegistry`) sait *qui* a voté, l'urne (`VoteUrna`) ne contient que le *choix*, indexé par un jeton HMAC (clé serveur `VOTE_SECRET`). Sans cette clé, une copie de la base ne permet pas de relier un choix à un citoyen ; le serveur, qui la détient, peut le faire (c'est ce qui permet de vous réafficher votre vote) : il s'agit donc d'une **pseudonymisation**, pas d'un anonymat absolu. Les urnes ne conservent que le jour du vote.
 - **Espace Présidentielle 2027** : Fiches des candidats déclarés ou pressentis, synthèses du profil, présentation du parti et mesures phares du programme (disponibles en Mode Classique et Mode Rue) avec vote consultatif.
 - **Fiches Députés & Gouvernement** : Historique des votes, statistiques de participation de chaque député et trombinoscope actualisé de la composition du Gouvernement.
 - **Gamification Citoyenne** : Système d'expérience (XP) et de niveaux de citoyenneté pour encourager la participation régulière à la vie démocratique.
@@ -64,3 +64,19 @@ flutter run -d chrome
 ## 📜 Licence
 
 Ce projet est distribué sous licence **MIT**. Voir le fichier `LICENSE` pour plus de détails.
+
+---
+
+## 🗄️ Migrations de base de données
+
+Le schéma de production est géré par des migrations TypeORM (`backend/src/database/migrations`), exécutées automatiquement au démarrage quand `DB_SYNCHRONIZE=false` (valeur de `docker-compose.prod.yml`). En développement, `synchronize` reste actif par défaut.
+
+```bash
+cd backend
+# Après modification d'une entité : générer la migration correspondante
+npm run migration:generate -- src/database/migrations/NomDeLaMigration
+npm run migration:run      # appliquer
+npm run migration:revert   # annuler la dernière
+```
+
+La CI applique toutes les migrations sur une base vide puis échoue si les entités et les migrations divergent.

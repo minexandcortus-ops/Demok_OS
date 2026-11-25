@@ -22,7 +22,7 @@ class AuthPromptModal extends StatelessWidget {
     BuildContext context, {
     String title = 'Passez à l\'action sur Démok',
     String message =
-        'Créez un compte citoyen en quelques secondes pour voter anonymement et suivre l\'activité parlementaire.',
+        'Créez un compte citoyen en quelques secondes pour voter de façon confidentielle et suivre l\'activité parlementaire.',
   }) {
     return showModalBottomSheet<void>(
       context: context,
@@ -106,7 +106,7 @@ class AuthPromptModal extends StatelessWidget {
                   SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      'Vote 100 % anonyme & données chiffrées',
+                      'Vote confidentiel & données chiffrées',
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,

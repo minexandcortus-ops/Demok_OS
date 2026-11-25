@@ -21,6 +21,7 @@ export class VoteUrna {
     })
     choice: VoteChoice;
 
-    @CreateDateColumn()
+    /** Jour seulement : une heure précise permettrait de rapprocher le bulletin de l'inscription au registre */
+    @CreateDateColumn({ type: 'date' })
     createdAt: Date;
 }

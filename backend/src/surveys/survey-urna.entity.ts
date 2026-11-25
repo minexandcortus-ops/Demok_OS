@@ -15,6 +15,7 @@ export class SurveyUrna {
     @Column()
     choiceId: string; // ID du candidat ou 'pour'/'contre'/'neutre'
 
-    @CreateDateColumn()
+    /** Jour seulement : une heure précise permettrait de rapprocher le bulletin de l'inscription au registre */
+    @CreateDateColumn({ type: 'date' })
     createdAt: Date;
 }

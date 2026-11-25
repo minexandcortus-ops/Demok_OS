@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 import { Citizen } from './citizen.entity';
 import { User } from './user.entity';
 import { Deputy } from '../votes/deputy.entity';
-import { PresidentialVote } from '../surveys/presidential-vote.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/get-user.decorator';
 import { AuthService } from '../auth/auth.service';
@@ -19,8 +18,6 @@ export class UsersController {
         private readonly userRepository: Repository<User>,
         @InjectRepository(Deputy)
         private readonly deputyRepository: Repository<Deputy>,
-        @InjectRepository(PresidentialVote)
-        private readonly presidentialVoteRepository: Repository<PresidentialVote>,
         private readonly authService: AuthService,
     ) { }
 
@@ -168,10 +165,6 @@ export class UsersController {
 
         try {
             console.log(`[DeleteAccount] Deleting data for user ${user.id} / citizen ${citizen.id}`);
-
-            // Delete all PresidentialVotes by this user
-            await this.presidentialVoteRepository.delete({ user: { id: citizen.user.id } });
-            console.log('[DeleteAccount] PresidentialVotes deleted');
 
             // Delete the Citizen profile
             await this.citizenRepository.delete({ id: citizen.id });

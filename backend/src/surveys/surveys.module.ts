@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SurveysController } from './surveys.controller';
 import { SurveysService } from './surveys.service';
 import { Candidate } from './candidate.entity';
-import { PresidentialVote } from './presidential-vote.entity';
 import { User } from '../users/user.entity';
 import { TopicPoll } from './topic-poll.entity';
 import { TopicPollService } from './topic-poll.service';
@@ -17,7 +16,6 @@ import { CandidatesSyncService } from './candidates-sync.service';
     imports: [
         TypeOrmModule.forFeature([
             Candidate, 
-            PresidentialVote, 
             User, 
             Citizen, 
             TopicPoll, 

@@ -2,7 +2,6 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Candidate } from './candidate.entity';
-import { PresidentialVote } from './presidential-vote.entity';
 import { User } from '../users/user.entity';
 import { Citizen } from '../users/citizen.entity';
 import { SurveyRegistry } from './survey-registry.entity';
@@ -16,8 +15,6 @@ export class SurveysService {
     constructor(
         @InjectRepository(Candidate)
         private readonly candidateRepository: Repository<Candidate>,
-        @InjectRepository(PresidentialVote)
-        private readonly oldVoteRepository: Repository<PresidentialVote>,
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
         @InjectRepository(Citizen)
@@ -128,26 +125,15 @@ export class SurveysService {
             order: { name: 'ASC' }
         });
 
-        // Total = old votes + new anonymized votes
-        const oldTotal = await this.oldVoteRepository.count();
-        const newTotal = await this.urnaRepository.count({ 
-            where: { surveyId: this.PRESIDENTIAL_SURVEY_ID } 
+        const totalVotes = await this.urnaRepository.count({
+            where: { surveyId: this.PRESIDENTIAL_SURVEY_ID }
         });
-        const totalVotes = oldTotal + newTotal;
 
         const results = await Promise.all(
             candidates.map(async (candidate) => {
-                // Count from old table
-                const oldVotes = await this.oldVoteRepository.count({
-                    where: { candidate: { id: candidate.id } }
-                });
-
-                // Count from new anonymized urna
-                const newVotes = await this.urnaRepository.count({
+                const totalCandidateVotes = await this.urnaRepository.count({
                     where: { surveyId: this.PRESIDENTIAL_SURVEY_ID, choiceId: candidate.id }
                 });
-
-                const totalCandidateVotes = oldVotes + newVotes;
 
                 return {
                     candidateId: candidate.id,
@@ -177,12 +163,6 @@ export class SurveysService {
             where: { user: { id: userId } } 
         });
         if (!citizen) return false;
-
-        // Check old table
-        const oldVote = await this.oldVoteRepository.findOne({
-            where: { user: { id: userId } }
-        });
-        if (oldVote) return true;
 
         // Check new registry
         const registryEntry = await this.registryRepository.findOne({

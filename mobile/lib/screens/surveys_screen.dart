@@ -111,7 +111,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
       AuthPromptModal.show(
         context,
         title: 'Votez pour la Présidentielle 2027',
-        message: 'Créez un compte citoyen en quelques secondes pour voter anonymement et découvrir les résultats de la communauté.',
+        message: 'Créez un compte citoyen en quelques secondes pour voter de façon confidentielle et découvrir les résultats de la communauté.',
       );
       return;
     }
@@ -746,7 +746,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
                                       this.context,
                                       title: 'Votez pour la Présidentielle 2027',
                                       message:
-                                          'Créez un compte citoyen en quelques secondes pour voter anonymement pour ${candidate.name} et découvrir les résultats de la communauté.',
+                                          'Créez un compte citoyen en quelques secondes pour voter de façon confidentielle pour ${candidate.name} et découvrir les résultats de la communauté.',
                                     );
                                   }
                                 : () {

@@ -59,7 +59,6 @@ export class TopicPollService implements OnModuleInit {
                     votePour: 0,
                     voteNeutre: 0,
                     voteContre: 0,
-                    voters: '',
                     isActive: true,
                 });
                 this.logger.log(`✅ Sondage "${poll.question}" créé.`);
@@ -86,7 +85,7 @@ export class TopicPollService implements OnModuleInit {
         });
         if (!citizen) throw new NotFoundException('Profil citoyen introuvable');
 
-        // Check already voted (Old system or New system)
+        // Déjà voté ?
         const hasVoted = await this.hasVoted(slug, userId);
         if (hasVoted) {
             return { alreadyVoted: true, poll: await this.toResult(poll) };
@@ -116,11 +115,7 @@ export class TopicPollService implements OnModuleInit {
         const poll = await this.pollRepository.findOne({ where: { slug } });
         if (!poll) return false;
 
-        // 1. Check legacy system (voters string)
-        const voters = poll.voters ? poll.voters.split(',').filter(Boolean) : [];
-        if (voters.includes(userId)) return true;
-
-        // 2. Check new anonymized system (Registry)
+        // Registre (les anciens votants y ont été repris par la migration RetireLegacyVotes)
         const citizen = await this.citizenRepository.findOne({ 
             where: { user: { id: userId } } 
         });

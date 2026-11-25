@@ -205,7 +205,7 @@ class _LawDetailScreenContentState extends State<_LawDetailScreenContent> {
         AuthPromptModal.show(
           context,
           title: 'Votez sur cette loi',
-          message: 'Créez un compte citoyen en quelques secondes pour voter anonymement et comparer votre avis avec celui de votre député.',
+          message: 'Créez un compte citoyen en quelques secondes pour voter de façon confidentielle et comparer votre avis avec celui de votre député.',
         );
         return;
       }

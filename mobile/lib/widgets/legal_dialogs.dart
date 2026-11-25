@@ -71,11 +71,12 @@ class LegalDialogs {
                   '• Code postal (affectation à votre circonscription et votre député)\n'
                   '• Email (sécurisation OTP, notifications et connexion)\n'
                   '• Votes et XP (statistiques de participation).'),
-                _buildSection('2. Confidentialité et Secret des Votes (Urne Anonyme)', 
+                _buildSection('2. Confidentialité des Votes (Urne Pseudonymisée)', 
                   'Le secret du vote est le pilier de Démok. Nous utilisons un système technique de "Double Registre" :\n'
                   '• Vos données d\'identité (pseudo, email) sont stockées séparément de vos choix de vote.\n'
-                  '• Le lien entre vous et votre vote est protégé par une "Urne Anonyme" utilisant un hachage cryptographique (HMAC) sécurisé par une clé secrète serveur.\n'
-                  '• Même en cas d\'accès non autorisé à notre base de données, il est mathématiquement impossible de relier rétrospectivement un choix de vote ("Pour", "Contre") à un utilisateur spécifique sans cette clé secrète.'),
+                  '• Votre choix est rangé dans une urne séparée, sous un jeton cryptographique (HMAC) calculé avec une clé secrète détenue par le serveur. L\'urne ne garde que le jour du vote, pas l\'heure.\n'
+                  '• Sans cette clé, une copie de la base de données ne permet pas de relier un choix ("Pour", "Contre") à un utilisateur.\n'
+                  '• Le serveur, qui détient la clé, peut retrouver votre choix : c\'est ce qui permet de vous le réafficher. Vos votes sont donc pseudonymisés (et non anonymes au sens du RGPD) ; aucun administrateur n\'y a accès depuis l\'interface d\'administration.'),
                 _buildSection('3. Finalités du Traitement', 
                   'Vos données servent uniquement à :\n'
                   '• Gérer votre compte et votre progression (XP).\n'
@@ -86,7 +87,7 @@ class LegalDialogs {
                 _buildSection('5. Vos Droits d’Accès et d’Oubli', 
                   'Vous pouvez à tout moment :\n'
                   '• Modifier votre email ou circonscription dans le profil.\n'
-                  '• Supprimer votre compte définitivement. Notez qu\'en cas de suppression, vos données identifiables (email, pseudo) sont effacées immédiatement. Vos votes passés seront conservés sous forme totalement anonyme pour l\'intégrité des statistiques historiques.'),
+                  '• Supprimer votre compte définitivement. Notez qu\'en cas de suppression, vos données identifiables (email, pseudo) sont effacées immédiatement. Vos bulletins passés restent comptés dans les statistiques, sans plus aucun lien possible avec vous : votre identifiant, nécessaire au calcul du jeton, est effacé.'),
                 _buildSection('6. Contact DPO', 
                   'Pour toute question relative à vos données : contact@demok.fr'),
               ],

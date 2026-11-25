@@ -2,7 +2,8 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeor
 
 /**
  * A generic "topic poll" — a simple question with 3 options: pour, neutre, contre.
- * Votes are stored anonymously by user ID to prevent multiple votes.
+ * Les compteurs votePour/voteNeutre/voteContre sont des agrégats historiques (ancien système) ;
+ * les nouveaux votes passent par le registre (SurveyRegistry) et l'urne (SurveyUrna).
  */
 @Entity('topic_poll')
 export class TopicPoll {
@@ -26,10 +27,6 @@ export class TopicPoll {
 
     @Column({ default: 0 })
     voteContre: number;
-
-    // Store user IDs who have voted (as a comma-separated list for simplicity)
-    @Column({ type: 'text', default: '' })
-    voters: string;
 
     @Column({ default: true })
     isActive: boolean;

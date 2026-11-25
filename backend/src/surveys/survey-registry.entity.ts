@@ -16,7 +16,8 @@ export class SurveyRegistry {
     @Column()
     citizenId: string;
 
-    @ManyToOne(() => Citizen)
+    // Supprimer un compte supprime son inscription au registre ; le bulletin (urne) reste, sans lien possible
+    @ManyToOne(() => Citizen, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'citizenId' })
     citizen: Citizen;
 
