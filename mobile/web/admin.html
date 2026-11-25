@@ -618,10 +618,41 @@
 
         <div style="margin-bottom: 12px; display: flex; gap: 12px;">
           <div style="flex: 1;">
-            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Lien du programme (Lien web ou PDF)</label>
+            <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Fiche de synthèse tierce (lien web ou PDF)</label>
             <input type="text" id="candidate-programUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="URL du programme" />
             <input type="file" id="candidate-programFile" accept="application/pdf, image/*" style="font-size: 12px; color: var(--text-muted);" />
           </div>
+        </div>
+
+        <div style="margin-bottom: 12px; padding: 12px; border: 1px solid var(--border, #333); border-radius: 8px;">
+          <div style="font-size: 13px; font-weight: bold; margin-bottom: 8px;">Liens officiels (vérifiés manuellement)</div>
+          <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+            <div style="flex: 1;">
+              <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Statut de candidature</label>
+              <select id="candidate-status" class="admin-input" style="width: 100%">
+                <option value="PRESSENTI">Pressenti(e)</option>
+                <option value="DECLARE" selected>Déclaré(e)</option>
+                <option value="OFFICIEL">Officiel (liste du Conseil constitutionnel)</option>
+                <option value="RETIRE">Retiré(e)</option>
+                <option value="MASQUE">Masqué (non affiché)</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">État du programme</label>
+              <select id="candidate-programStatus" class="admin-input" style="width: 100%">
+                <option value="NON_PUBLIE" selected>Non publié</option>
+                <option value="PARTIEL">Partiel</option>
+                <option value="PUBLIE">Publié</option>
+              </select>
+            </div>
+          </div>
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Site officiel de campagne (https://…)</label>
+          <input type="text" id="candidate-officialSiteUrl" class="admin-input" style="width: 100%; margin-bottom: 8px;" placeholder="https://…" />
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Programme officiel (https://… ou PDF)</label>
+          <input type="text" id="candidate-officialProgramUrl" class="admin-input" style="width: 100%; margin-bottom: 4px;" placeholder="https://…" />
+          <input type="file" id="candidate-officialProgramFile" accept="application/pdf" style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;" />
+          <label style="font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 4px;">Date de publication du programme</label>
+          <input type="date" id="candidate-programPublishedAt" class="admin-input" style="width: 100%" />
         </div>
 
         <div style="margin-bottom: 24px;">
@@ -1323,6 +1354,8 @@
             <div class="report-meta">
               <span style="font-size: 16px; font-weight: bold;">${escapeHtml(c.name)}</span>
               <span class="badge badge-category">${escapeHtml(c.party)}</span>
+              <span class="badge">${escapeHtml(c.status || 'DECLARE')}</span>
+              <span class="badge">${c.officialProgramUrl ? '📄 Programme officiel' : '⏳ ' + escapeHtml(c.programStatus || 'NON_PUBLIE')}</span>
             </div>
             <div class="status-actions">
               <button class="btn-status btn-review" onclick='editCandidate(${JSON.stringify(c).replace(/'/g, "&#39;")})'>Modifier</button>
@@ -1348,6 +1381,7 @@
     document.getElementById('candidate-programUrl').value = '';
     document.getElementById('candidate-programFile').value = '';
     document.getElementById('candidate-description').value = '';
+    setCandidateOfficialFields({});
     
     document.getElementById('candidate-modal-title').textContent = 'Nouveau Candidat';
     document.getElementById('candidate-modal-overlay').style.display = 'flex';
@@ -1364,9 +1398,19 @@
     document.getElementById('candidate-programUrl').value = c.programUrl || '';
     document.getElementById('candidate-programFile').value = '';
     document.getElementById('candidate-description').value = c.description || '';
+    setCandidateOfficialFields(c);
     
     document.getElementById('candidate-modal-title').textContent = 'Modifier Candidat';
     document.getElementById('candidate-modal-overlay').style.display = 'flex';
+  }
+
+  function setCandidateOfficialFields(c) {
+    document.getElementById('candidate-status').value = c.status || 'DECLARE';
+    document.getElementById('candidate-programStatus').value = c.programStatus || 'NON_PUBLIE';
+    document.getElementById('candidate-officialSiteUrl').value = c.officialSiteUrl || '';
+    document.getElementById('candidate-officialProgramUrl').value = c.officialProgramUrl || '';
+    document.getElementById('candidate-officialProgramFile').value = '';
+    document.getElementById('candidate-programPublishedAt').value = c.programPublishedAt || '';
   }
 
   function closeCandidateModal() {
@@ -1419,8 +1463,17 @@
     const uploadedPartyLogo = await uploadFile('candidate-partyLogoFile');
     if (uploadedPartyLogo) partyLogoUrl = uploadedPartyLogo;
 
+    let officialProgramUrl = document.getElementById('candidate-officialProgramUrl').value.trim();
+    const uploadedOfficialProgram = await uploadFile('candidate-officialProgramFile');
+    if (uploadedOfficialProgram) officialProgramUrl = uploadedOfficialProgram;
+
     const payload = {
-      name, party, description, photoUrl, programUrl, partyLogoUrl
+      name, party, description, photoUrl, programUrl, partyLogoUrl,
+      status: document.getElementById('candidate-status').value,
+      programStatus: document.getElementById('candidate-programStatus').value,
+      officialSiteUrl: document.getElementById('candidate-officialSiteUrl').value.trim(),
+      officialProgramUrl,
+      programPublishedAt: document.getElementById('candidate-programPublishedAt').value,
     };
 
     const method = id ? 'PUT' : 'POST';
@@ -1438,7 +1491,9 @@
         closeCandidateModal();
         loadCandidates();
       } else {
-        showToast('Erreur de sauvegarde', 'error');
+        const err = await res.json().catch(() => ({}));
+        const msg = Array.isArray(err.message) ? err.message.join(' · ') : err.message;
+        showToast(msg || 'Erreur de sauvegarde', 'error');
       }
     } catch (e) {
       showToast('Erreur de connexion', 'error');

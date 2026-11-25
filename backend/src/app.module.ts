@@ -4,28 +4,15 @@ import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ServeStaticModule } from '@nestjs/serve-static';
+import { buildTypeOrmOptions } from './database/typeorm.config';
 import { join } from 'path';
 import { IngestionModule } from './ingestion/ingestion.module';
-import { Law } from './laws/law.entity';
-import { LawFavorite } from './laws/law-favorite.entity';
-import { User } from './users/user.entity';
-import { Citizen } from './users/citizen.entity';
 import { AuthModule } from './auth/auth.module';
-import { VoteRegistry } from './votes/vote-registry.entity';
-import { VoteUrna } from './votes/vote-choice.entity';
-import { Deputy } from './votes/deputy.entity';
-import { OfficialVote } from './votes/official-vote.entity';
 import { VotesModule } from './votes/votes.module';
 import { UsersModule } from './users/users.module';
-import { CitizenLevel } from './gamification/entities/citizen-level.entity';
 import { GamificationModule } from './gamification/gamification.module';
-import { Category } from './laws/category.entity';
-import { Amendement } from './laws/amendement.entity';
 import { CategoriesModule } from './laws/categories.module';
 import { SurveysModule } from './surveys/surveys.module';
-import { Candidate } from './surveys/candidate.entity';
-import { PresidentialVote } from './surveys/presidential-vote.entity';
-import { TopicPoll } from './surveys/topic-poll.entity';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { NotificationModule } from './notifications/notification.module';
 import { AdminModule } from './admin/admin.module';
@@ -33,9 +20,6 @@ import { DeputiesModule } from './deputies/deputies.module';
 
 import { GovernmentModule } from './government/government.module';
 import { ReportsModule } from './reports/reports.module';
-import { Report } from './reports/entities/report.entity';
-import { SurveyRegistry } from './surveys/survey-registry.entity';
-import { SurveyUrna } from './surveys/survey-urna.entity';
 
 @Module({
     imports: [
@@ -51,22 +35,7 @@ import { SurveyUrna } from './surveys/survey-urna.entity';
             serveRoot: '/uploads',
         }),
 
-        TypeOrmModule.forRoot({
-            type: 'postgres',
-            host: process.env.DATABASE_HOST || 'localhost',
-            port: parseInt(process.env.DATABASE_PORT || '5432', 10),
-            username: process.env.DATABASE_USER || 'Démok_user',
-            password: process.env.DATABASE_PASSWORD || 'Démok_password',
-            database: process.env.DATABASE_NAME || 'Démok_db',
-            entities: [
-                Law, LawFavorite, User, Citizen, 
-                VoteRegistry, VoteUrna, Deputy, OfficialVote, 
-                CitizenLevel, Category, Amendement, Candidate, 
-                PresidentialVote, TopicPoll,
-                Report, SurveyRegistry, SurveyUrna
-            ],
-            synchronize: process.env.NODE_ENV !== 'production', // Use migrations in production
-        }),
+        TypeOrmModule.forRoot(buildTypeOrmOptions()),
         EventEmitterModule.forRoot({ global: true }),
         IngestionModule,
         AuthModule,

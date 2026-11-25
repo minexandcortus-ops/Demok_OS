@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Candidate } from './candidate.entity';
+import { In, Repository } from 'typeorm';
+import { Candidate, VISIBLE_CANDIDATE_STATUSES } from './candidate.entity';
 import { PresidentialVote } from './presidential-vote.entity';
 import { User } from '../users/user.entity';
 import { Citizen } from '../users/citizen.entity';
@@ -47,7 +47,7 @@ export class SurveysService {
      * Get all presidential candidates ordered alphabetically by name
      */
     async getCandidates(): Promise<Candidate[]> {
-        const candidates = await this.candidateRepository.find();
+        const candidates = await this.candidateRepository.find({ where: { status: In(VISIBLE_CANDIDATE_STATUSES) } });
         return candidates.sort((a, b) => {
             const getLastName = (name: string) => name.split(' ').slice(1).join(' ') || name;
             const lastNameA = getLastName(a.name).toLowerCase();
@@ -66,7 +66,7 @@ export class SurveysService {
             where: { user: { id: userId } } 
         });
         const candidate = await this.candidateRepository.findOne({ 
-            where: { id: candidateId } 
+            where: { id: candidateId, status: In(VISIBLE_CANDIDATE_STATUSES) } 
         });
 
         if (!citizen || !candidate) {
@@ -125,6 +125,7 @@ export class SurveysService {
      */
     async getResults() {
         const candidates = await this.candidateRepository.find({
+            where: { status: In(VISIBLE_CANDIDATE_STATUSES) },
             order: { name: 'ASC' }
         });
 
@@ -157,6 +158,12 @@ export class SurveysService {
                     description: candidate.description,
                     programUrl: candidate.programUrl,
                     partyLogoUrl: candidate.partyLogoUrl,
+                    status: candidate.status,
+                    officialSiteUrl: candidate.officialSiteUrl,
+                    officialProgramUrl: candidate.officialProgramUrl,
+                    programStatus: candidate.programStatus,
+                    programPublishedAt: candidate.programPublishedAt,
+                    linksCheckedAt: candidate.linksCheckedAt,
                     votes: totalCandidateVotes,
                     percentage: totalVotes > 0 ? (totalCandidateVotes / totalVotes) * 100 : 0
                 };
