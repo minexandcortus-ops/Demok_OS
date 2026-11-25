@@ -12,6 +12,7 @@ const FRENCH_MONTHS: Record<string, string> = {
     'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
     'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
     'aout': '08', 'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12',
+    'fevrier': '02', 'decembre': '12',
 };
 
 interface AgendaEntry {
@@ -136,6 +137,10 @@ export class IngestionHtmlAgendaService {
 
         const monthNum = FRENCH_MONTHS[monthRaw] || FRENCH_MONTHS[monthNorm];
         if (!monthNum) return null;
+
+        // Rejette les dates impossibles (ex. 31 février)
+        const check = new Date(Date.UTC(Number(year), Number(monthNum) - 1, dayNum));
+        if (check.getUTCDate() !== dayNum) return null;
 
         return `${year}-${monthNum}-${day}`;
     }

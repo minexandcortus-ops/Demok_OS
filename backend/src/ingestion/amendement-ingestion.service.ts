@@ -285,13 +285,17 @@ export class AmendementIngestionService {
         return AmendementStatut.EN_DISCUSSION;
     }
 
+    /**
+     * Parse un CSV (séparateur virgule, guillemets doublés pour échapper).
+     * Les retours à la ligne à l'intérieur d'un champ entre guillemets sont conservés :
+     * un dispositif d'amendement sur plusieurs lignes ne casse plus la ligne.
+     */
     parseCsv(csvText: string): Record<string, string>[] {
-        const lines = csvText.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length < 2) return [];
-        const headers = this.parseCsvLine(lines[0]);
+        const records = this.parseCsvRecords(csvText.replace(/^\uFEFF/, ''));
+        if (records.length < 2) return [];
+        const headers = records[0];
         const rows: Record<string, string>[] = [];
-        for (let i = 1; i < lines.length; i++) {
-            const values = this.parseCsvLine(lines[i]);
+        for (const values of records.slice(1)) {
             if (values.length < headers.length) continue;
             const row: Record<string, string> = {};
             for (let j = 0; j < headers.length; j++) row[headers[j]] = values[j] ?? '';
@@ -300,23 +304,43 @@ export class AmendementIngestionService {
         return rows;
     }
 
-    private parseCsvLine(line: string): string[] {
-        const result: string[] = [];
-        let current = '';
+    private parseCsvRecords(text: string): string[][] {
+        const records: string[][] = [];
+        let record: string[] = [];
+        let field = '';
         let inQuotes = false;
-        for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-                if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-                else inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                result.push(current.trim());
-                current = '';
+        const endField = () => {
+            record.push(field.trim());
+            field = '';
+        };
+        const endRecord = () => {
+            endField();
+            if (record.some((v) => v !== '')) records.push(record);
+            record = [];
+        };
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            if (inQuotes) {
+                if (char === '"' && text[i + 1] === '"') {
+                    field += '"';
+                    i++;
+                } else if (char === '"') {
+                    inQuotes = false;
+                } else {
+                    field += char === '\r' && text[i + 1] === '\n' ? '' : char;
+                }
+            } else if (char === '"') {
+                inQuotes = true;
+            } else if (char === ',') {
+                endField();
+            } else if (char === '\n' || char === '\r') {
+                if (char === '\r' && text[i + 1] === '\n') i++;
+                endRecord();
             } else {
-                current += char;
+                field += char;
             }
         }
-        result.push(current.trim());
-        return result;
+        if (field !== '' || record.length) endRecord();
+        return records;
     }
 }

@@ -166,13 +166,13 @@ export class DynScraperService {
             const dateMatch = pageText.match(/séance du (\d+)\s+([a-zéû]+)\s+(\d{4})/i);
             if (dateMatch) {
                 const day = parseInt(dateMatch[1], 10);
-                const monthName = dateMatch[2].toLowerCase();
+                const monthName = dateMatch[2].toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 const year = parseInt(dateMatch[3], 10);
-                const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+                const months = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'aout', 'septembre', 'octobre', 'novembre', 'decembre'];
                 const monthIndex = months.indexOf(monthName);
-                if (monthIndex !== -1) {
-                    const parsedDate = new Date(year, monthIndex, day);
-                    dateScrutin = parsedDate.toISOString().split('T')[0];
+                if (monthIndex !== -1 && day >= 1 && day <= 31) {
+                    // Construction directe : new Date(y, m, d).toISOString() décalait d'un jour hors UTC
+                    dateScrutin = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 }
             }
 
