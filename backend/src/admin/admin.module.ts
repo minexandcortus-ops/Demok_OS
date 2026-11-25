@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminIngestionController } from './admin-ingestion.controller';
-import { HealthController } from './health.controller';
+import { HealthController, PublicHealthController } from './health.controller';
 import { AdminReportsController, AdminLawsController } from './admin-reports.controller';
 import { AdminPollsController } from './admin-polls.controller';
 import { AdminCandidatesController } from './admin-candidates.controller';
@@ -29,6 +29,7 @@ import { Candidate } from '../surveys/candidate.entity';
     controllers: [
         AdminIngestionController,
         HealthController,
+        PublicHealthController,
         AdminReportsController,
         AdminLawsController,
         AdminPollsController,

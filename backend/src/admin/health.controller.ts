@@ -1,12 +1,36 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, UseGuards } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Law } from '../laws/law.entity';
 import { ConfigService } from '@nestjs/config';
+import { AdminKeyGuard } from './admin-key.guard';
 
 /**
- * Endpoint de monitoring pour vérifier l'état du système
+ * Sonde publique minimale (load balancer, uptime monitor).
+ * N'expose aucune information de configuration.
  */
+@Controller('health')
+export class PublicHealthController {
+    constructor(
+        @InjectRepository(Law)
+        private lawRepository: Repository<Law>,
+    ) { }
+
+    @Get()
+    async getHealth() {
+        try {
+            await this.lawRepository.query('SELECT 1');
+            return { status: 'ok', timestamp: new Date().toISOString() };
+        } catch {
+            return { status: 'unhealthy', timestamp: new Date().toISOString() };
+        }
+    }
+}
+
+/**
+ * Endpoint de monitoring détaillé, réservé à l'administration (X-Admin-Key).
+ */
+@UseGuards(AdminKeyGuard)
 @Controller('admin/health')
 export class HealthController {
     private readonly logger = new Logger(HealthController.name);

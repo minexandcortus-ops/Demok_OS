@@ -1,4 +1,16 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { createHash, timingSafeEqual } from 'crypto';
+
+/**
+ * Compare deux secrets en temps constant.
+ * Les deux valeurs sont hachées au préalable pour obtenir des buffers de même longueur
+ * (timingSafeEqual exige des longueurs identiques et ne doit pas révéler la longueur attendue).
+ */
+export function safeSecretEquals(provided: string, expected: string): boolean {
+    const a = createHash('sha256').update(provided, 'utf8').digest();
+    const b = createHash('sha256').update(expected, 'utf8').digest();
+    return timingSafeEqual(a, b);
+}
 
 /**
  * Guard qui vérifie la présence d'une clé API admin dans le header X-Admin-Key.
@@ -16,7 +28,7 @@ export class AdminKeyGuard implements CanActivate {
         }
 
         const providedKey = request.headers['x-admin-key'];
-        if (!providedKey || providedKey !== adminKey) {
+        if (typeof providedKey !== 'string' || !providedKey || !safeSecretEquals(providedKey, adminKey)) {
             throw new UnauthorizedException('Clé admin invalide ou manquante.');
         }
 
